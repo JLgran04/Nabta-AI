@@ -238,11 +238,7 @@ st.markdown("---")
 # -------------------------------------------------
 # Analyze button and NEW automatic detection
 # -------------------------------------------------
-analyze_clicked = st.button("Analyze Image with Nabta") if img is not None else False
 
-if img is None:
-    st.warning("Please upload or take a picture.")
-    st.stop()
 
 validate_image(img)         # 💚 CAMERA VALIDATION
 
@@ -282,4 +278,5 @@ if analyze_clicked:
     # everything else stays EXACTLY as your original rendering:
     # result card + English + Arabic blocks
     ...
+
 
