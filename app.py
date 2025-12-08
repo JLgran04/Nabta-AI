@@ -6,15 +6,6 @@ import keras
 import google.generativeai as genai
 from dotenv import load_dotenv
 
-# Image quality validation
-import cv2
-
-# Auto scene classifier (MobileNet)
-import tensorflow as tf
-from tensorflow.keras.applications.mobilenet_v2 import (
-    MobileNetV2, preprocess_input, decode_predictions
-)
-
 # -------------------------------------------------
 # Page Configuration
 # -------------------------------------------------
@@ -24,37 +15,8 @@ st.set_page_config(
     layout="wide"
 )
 
-# Camera & Image validation
 # -------------------------------------------------
-def validate_image(img: Image.Image):
-    """
-    Check brightness, resolution, and blur before prediction.
-    """
-    arr = np.array(img)
-
-    # Lighting check
-    if arr.mean() < 25:
-        st.error("⚠️ Image is too dark. Turn on more light and retake the photo.")
-        st.stop()
-
-    # Resolution check
-    if arr.shape[0] < 200 or arr.shape[1] < 200:
-        st.error("⚠️ Image resolution is too low. Please take a clearer picture (zoom in closer).")
-        st.stop()
-
-    # Blur check
-    gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
-    blur_val = cv2.Laplacian(gray, cv2.CV_64F).var()
-
-    if blur_val < 60:
-        st.error("⚠️ Image is too blurry. Hold the camera steady and retake the photo.")
-        st.stop()
-
-    return True
-
-
-# -------------------------------------------------
-# Custom UI Styles (unchanged from your original)
+# Custom UI Styles
 # -------------------------------------------------
 st.markdown(
     """
@@ -372,7 +334,7 @@ with right_col:
     st.markdown('<h3>Preview & Task</h3>', unsafe_allow_html=True)
 
     if img is not None:
-        st.image(img, caption="Preview", use_container_width=True)
+        st.image(img, caption="Preview", use_column_width=True)
     else:
         st.markdown(
             '<div class="warning-box">No image yet. Upload or take a photo.</div>',
@@ -406,38 +368,15 @@ else:
     )
 
 # -------------------------------------------------
-# Results Section (with validation + scene detection)
+# Results Section
 # -------------------------------------------------
 if analyze_clicked and img is not None:
-
-    # 1) basic quality validation
-    validate_image(img)
-
-    # 2) scene detection
-    category = detect_category(img)
-
-    # 3) block wrong category
-    if task_type == "Soil Moisture" and category != "soil":
-        st.error("⚠️ This image doesn’t look like soil. Please upload a clear soil picture.")
-        st.stop()
-
-    if task_type == "Plant Disease" and category != "plant":
-        st.error("⚠️ This image doesn’t look like a plant/leaf. Please upload a clear plant leaf picture.")
-        st.stop()
-
     with st.spinner("Analyzing image and generating advice..."):
         if task_type == "Soil Moisture":
             label, prob = predict_soil(img)
-            # additional safety: low confidence
-            if prob < 0.60:
-                st.error("⚠️ This does not seem to be soil or the model is not confident. Try another picture closer to the soil.")
-                st.stop()
             explanation_raw = explain_prediction(label, "soil moisture")
         else:
             label, prob = predict_plant(img)
-            if prob < 0.60:
-                st.error("⚠️ This does not seem to be a plant leaf or the model is not confident. Try another picture closer to the leaf.")
-                st.stop()
             explanation_raw = explain_prediction(label, "plant disease")
 
     # Split English / Arabic for nicer layout
@@ -451,7 +390,7 @@ if analyze_clicked and img is not None:
     else:
         english_part = explanation_raw
 
-    # ✅ Result card
+    # ✅ White text prediction card (inline style so Streamlit doesn't override)
     st.markdown(
         f"""
         <div class="result-card">
@@ -479,7 +418,6 @@ if analyze_clicked and img is not None:
         st.markdown('<b>الإرشادات بالعربية</b><br>', unsafe_allow_html=True)
         st.markdown(arabic_part, unsafe_allow_html=False)
         st.markdown('</div>', unsafe_allow_html=True)
-
 
 
 
