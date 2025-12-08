@@ -240,19 +240,7 @@ st.markdown("---")
 # -------------------------------------------------
 
 
-validate_image(img)         # 💚 CAMERA VALIDATION
 
-detected = detect_category(img)   # 🌿 AUTOMATIC DETECTION
-
-if detected == "soil":
-    task_type = "Soil Moisture"
-    st.success("🌍 Soil detected automatically.")
-elif detected == "plant":
-    task_type = "Plant Disease"
-    st.success("🌿 Plant detected automatically.")
-else:
-    st.error("⚠️ This image does not appear to be soil or a plant. Try another picture.")
-    st.stop()
 
 
 # -------------------------------------------------
@@ -278,5 +266,6 @@ if analyze_clicked:
     # everything else stays EXACTLY as your original rendering:
     # result card + English + Arabic blocks
     ...
+
 
 
