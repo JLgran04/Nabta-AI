@@ -411,7 +411,7 @@ with right_col:
     st.markdown('<h3>Preview & Task</h3>', unsafe_allow_html=True)
 
     if img is not None:
-        st.image(img, caption="Preview", use_column_width=True)
+        st.image(img, caption="Preview", use_container_width=True)
     else:
         st.markdown(
             '<div class="warning-box">No image yet. Upload or take a photo.</div>',
@@ -518,3 +518,4 @@ if analyze_clicked and img is not None:
         st.markdown('<b>الإرشادات بالعربية</b><br>', unsafe_allow_html=True)
         st.markdown(arabic_part, unsafe_allow_html=False)
         st.markdown('</div>', unsafe_allow_html=True)
+
