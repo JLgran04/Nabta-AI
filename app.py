@@ -30,36 +30,57 @@ st.set_page_config(
 scene_model = MobileNetV2(weights="imagenet")
 
 def detect_category(img: Image.Image) -> str:
-    """
-    Use MobileNetV2 to guess if the image is soil, plant, or unknown.
-    """
     arr = img.resize((224, 224))
     arr = np.array(arr).astype("float32")
     arr = np.expand_dims(arr, axis=0)
     arr = preprocess_input(arr)
 
     preds = scene_model.predict(arr, verbose=0)
-    decoded = decode_predictions(preds, top=3)[0]
+    decoded = decode_predictions(preds, top=5)[0]
 
     labels = [d[1].lower() for d in decoded]
     scores = [d[2] for d in decoded]
 
-    # basic keywords for soil
-    if any(word in labels[0] for word in ["soil", "ground", "earth", "dirt"]):
+    # combine labels into a single string for easy matching
+    text = " ".join(labels)
+
+    # your exact crops (plant-disease dataset)
+    plant_keywords = [
+        "corn", "maize",
+        "tomato",
+        "potato",
+        "pepper", "bell", "green pepper", "capsicum",
+        "strawberry"
+    ]
+
+    # more general leaf terms
+    leaf_keywords = [
+        "leaf", "plant", "foliage", "vegetable"
+    ]
+
+    soil_keywords = [
+        "soil", "ground", "earth", "mud", "sand", "dirt"
+    ]
+
+    # detect soil
+    if any(w in text for w in soil_keywords):
         return "soil"
 
-    # basic keywords for plant/leaf
-    if any(word in labels[0] for word in [
-        "leaf", "plant", "flower", "tree", "vine",
-        "corn", "tomato", "potato", "strawberry", "pepper"
-    ]):
+    # detect your allowed crops
+    if any(w in text for w in plant_keywords):
         return "plant"
 
-    # low confidence = unknown
-    if scores[0] < 0.45:
+    # detect general leaf but only if confidence fairly high
+    if any(w in text for w in leaf_keywords) and max(scores) > 0.30:
+        return "plant"
+
+    # fallback
+    if max(scores) < 0.20:
         return "unknown"
 
     return "unknown"
+
+
 
 
 # -------------------------------------------------
@@ -518,4 +539,5 @@ if analyze_clicked and img is not None:
         st.markdown('<b>الإرشادات بالعربية</b><br>', unsafe_allow_html=True)
         st.markdown(arabic_part, unsafe_allow_html=False)
         st.markdown('</div>', unsafe_allow_html=True)
+
 
