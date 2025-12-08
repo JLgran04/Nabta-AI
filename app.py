@@ -40,45 +40,31 @@ def detect_category(img: Image.Image) -> str:
 
     labels = [d[1].lower() for d in decoded]
     scores = [d[2] for d in decoded]
-
-    # combine labels into a single string for easy matching
     text = " ".join(labels)
 
-    # your exact crops (plant-disease dataset)
-    plant_keywords = [
-        "corn", "maize",
-        "tomato",
-        "potato",
-        "pepper", "bell", "green pepper", "capsicum",
-        "strawberry"
+    soil_words = ["soil","ground","earth","mud","dirt","sand"]
+
+    # make leaf detection wide & forgiving
+    leaf_words = [
+        "leaf","plant","shrub","foliage","flower","greenhouse",
+        "vegetable","potted","garden",
+        "potato","tomato","corn","pepper","maize","strawberry"
     ]
 
-    # more general leaf terms
-    leaf_keywords = [
-        "leaf", "plant", "foliage", "vegetable"
-    ]
-
-    soil_keywords = [
-        "soil", "ground", "earth", "mud", "sand", "dirt"
-    ]
-
-    # detect soil
-    if any(w in text for w in soil_keywords):
+    # soil check
+    if any(w in text for w in soil_words):
         return "soil"
 
-    # detect your allowed crops
-    if any(w in text for w in plant_keywords):
+    # ANY leaf-like object ⇒ treat as plant
+    if any(w in text for w in leaf_words):
         return "plant"
 
-    # detect general leaf but only if confidence fairly high
-    if any(w in text for w in leaf_keywords) and max(scores) > 0.30:
-        return "plant"
-
-    # fallback
-    if max(scores) < 0.20:
+    # fallback threshold
+    if max(scores) < 0.18:
         return "unknown"
 
     return "unknown"
+
 
 
 
@@ -539,5 +525,6 @@ if analyze_clicked and img is not None:
         st.markdown('<b>الإرشادات بالعربية</b><br>', unsafe_allow_html=True)
         st.markdown(arabic_part, unsafe_allow_html=False)
         st.markdown('</div>', unsafe_allow_html=True)
+
 
 
