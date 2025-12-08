@@ -24,52 +24,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# -------------------------------------------------
-# Load scene classifier (automatic detection)
-# -------------------------------------------------
-scene_model = MobileNetV2(weights="imagenet")
-
-def detect_category(img: Image.Image) -> str:
-    arr = img.resize((224, 224))
-    arr = np.array(arr).astype("float32")
-    arr = np.expand_dims(arr, axis=0)
-    arr = preprocess_input(arr)
-
-    preds = scene_model.predict(arr, verbose=0)
-    decoded = decode_predictions(preds, top=5)[0]
-
-    labels = [d[1].lower() for d in decoded]
-    scores = [d[2] for d in decoded]
-    text = " ".join(labels)
-
-    soil_words = ["soil","ground","earth","mud","dirt","sand"]
-
-    # make leaf detection wide & forgiving
-    leaf_words = [
-        "leaf","plant","shrub","foliage","flower","greenhouse",
-        "vegetable","potted","garden",
-        "potato","tomato","corn","pepper","maize","strawberry"
-    ]
-
-    # soil check
-    if any(w in text for w in soil_words):
-        return "soil"
-
-    # ANY leaf-like object ⇒ treat as plant
-    if any(w in text for w in leaf_words):
-        return "plant"
-
-    # fallback threshold
-    if max(scores) < 0.18:
-        return "unknown"
-
-    return "unknown"
-
-
-
-
-
-# -------------------------------------------------
 # Camera & Image validation
 # -------------------------------------------------
 def validate_image(img: Image.Image):
@@ -525,6 +479,7 @@ if analyze_clicked and img is not None:
         st.markdown('<b>الإرشادات بالعربية</b><br>', unsafe_allow_html=True)
         st.markdown(arabic_part, unsafe_allow_html=False)
         st.markdown('</div>', unsafe_allow_html=True)
+
 
 
 
