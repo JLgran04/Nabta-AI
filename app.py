@@ -6,6 +6,19 @@ import keras
 import google.generativeai as genai
 from dotenv import load_dotenv
 
+# -------------------------------------
+# EXTRA imports for scene detection
+# -------------------------------------
+import tensorflow as tf
+from tensorflow.keras.applications.mobilenet_v2 import (
+    MobileNetV2, preprocess_input, decode_predictions
+)
+
+# -------------------------------------
+# Extra import for blur detection
+# -------------------------------------
+import cv2
+
 # -------------------------------------------------
 # Page Configuration
 # -------------------------------------------------
@@ -15,410 +28,205 @@ st.set_page_config(
     layout="wide"
 )
 
-# -------------------------------------------------
-# Custom UI Styles
-# -------------------------------------------------
-st.markdown(
-    """
-    <style>
-    body {
-        background-color: #f7f8fa;
-        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
-    }
-    .main-header {
-        background: linear-gradient(90deg, #2e7d32 0%, #66bb6a 100%);
-        color: white;
-        padding: 1.2rem 2rem;
-        border-radius: 12px;
-        text-align: center;
-        margin-bottom: 1.5rem;
-        border: 1px solid rgba(255,255,255,0.2);
-        box-shadow: 0 12px 30px rgba(0,0,0,0.15);
-    }
-    .main-header h1 {
-        font-size: 1.5rem;
-        font-weight: 600;
-        margin: 0;
-        color: #fff;
-    }
-    .main-header p {
-        font-size: 0.9rem;
-        margin: 0.3rem 0 0 0;
-        color: rgba(255,255,255,0.9);
-    }
-
-    .card {
-        background: #ffffff;
-        border-radius: 14px;
-        padding: 1.2rem 1.2rem 1rem 1.2rem;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 6px 24px rgba(0,0,0,0.04);
-    }
-
-    .card h3 {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #2e7d32;
-        margin-top: 0;
-        margin-bottom: .75rem;
-        display: flex;
-        align-items: center;
-        gap: .5rem;
-    }
-
-    .section-title {
-        font-size: 1.05rem;
-        font-weight: 600;
-        color: #1a1a1a;
-        margin-bottom: .5rem;
-    }
-
-    /* Result card where we show prediction + confidence */
-    .result-card {
-        background: linear-gradient(90deg, #2e7d32 0%, #66bb6a 100%);
-        border-radius: 14px;
-        padding: 1.2rem 1.5rem;
-        border: none;
-        box-shadow: 0 12px 30px rgba(0,0,0,0.1);
-        margin-bottom: 1rem;
-        color: #ffffff;
-    }
-
-    .result-label {
-        font-weight: 600;
-        font-size: 1.2rem;
-        color: #ffffff;
-        margin-bottom: .25rem;
-    }
-
-    .confidence {
-        font-size: 1rem;
-        color: rgba(255,255,255,0.9);
-        margin-bottom: 0.75rem;
-    }
-
-    /* White advice box for English */
-    .advice-wrapper {
-        background: #ffffff;
-        border: 2px solid #2e7d32;
-        border-radius: 10px;
-        padding: 1rem 1rem;
-        font-size: 0.9rem;
-        color: #1f2937;
-        line-height: 1.5rem;
-        white-space: pre-wrap;
-        box-shadow: 0 6px 16px rgba(0,0,0,0.05);
-        margin-bottom: 1rem;
-    }
-
-    .advice-header {
-        font-weight: 600;
-        margin-bottom: .5rem;
-        font-size: .95rem;
-        color: #374151;
-    }
-
-    /* Arabic block, RTL */
-    .rtl-block {
-        direction: rtl;
-        text-align: right;
-        background: #ffffff;
-        border-radius: 10px;
-        border: 2px solid #2e7d32;
-        padding: .9rem .9rem;
-        margin-top: .75rem;
-        font-size: 0.9rem;
-        line-height: 1.6rem;
-        color: #1f2937;
-        box-shadow: 0 6px 16px rgba(0,0,0,0.05);
-    }
-
-    /* Big green call-to-action button */
-    .analyze-button button {
-        width: 100% !important;
-        border-radius: 10px !important;
-        font-weight: 600 !important;
-        background: linear-gradient(90deg, #2e7d32 0%, #66bb6a 100%) !important;
-        border: 0 !important;
-        color: white !important;
-        box-shadow: 0 10px 24px rgba(46,125,50,.4) !important;
-    }
-
-    /* Warning box */
-    .warning-box {
-        background: #fff7ed;
-        border: 1px solid #fdba74;
-        color: #9a3412;
-        border-radius: 10px;
-        padding: .8rem 1rem;
-        font-size: .9rem;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
 # -------------------------------------------------
-# Header
+# Load scene classifier (automatic detection)
 # -------------------------------------------------
-st.markdown(
-    """
-    <div class="main-header">
-        <h1>🌿 Nabta AI</h1>
-        <p>Working towards creating a healthier, greener, and sustainable environment in Kuwait.</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+scene_model = MobileNetV2(weights="imagenet")
+
+def detect_category(img: Image.Image) -> str:
+    arr = img.resize((224, 224))
+    arr = np.array(arr).astype("float32")
+    arr = np.expand_dims(arr, axis=0)
+    arr = preprocess_input(arr)
+
+    preds = scene_model.predict(arr, verbose=0)
+    decoded = decode_predictions(preds, top=3)[0]
+
+    labels = [d[1].lower() for d in decoded]
+    scores = [d[2] for d in decoded]
+
+    # keywords
+    if any(word in labels[0] for word in ["soil", "ground", "earth", "dirt"]):
+        return "soil"
+
+    if any(word in labels[0] for word in [
+        "leaf", "plant", "flower", "tree",
+        "vine", "corn", "tomato"
+    ]):
+        return "plant"
+
+    if scores[0] < 0.45:
+        return "unknown"
+
+    return "unknown"
+
 
 # -------------------------------------------------
-# Environment / API Key
+# Image validation (blur, lighting)
+# -------------------------------------------------
+def validate_image(img: Image.Image):
+    arr = np.array(img)
+
+    # Lighting check
+    if arr.mean() < 25:
+        st.error("⚠️ Image is too dark. Turn on more light.")
+        st.stop()
+
+    # Resolution check
+    if arr.shape[0] < 200 or arr.shape[1] < 200:
+        st.error("⚠️ Image resolution is too low. Please take a clearer picture.")
+        st.stop()
+
+    # Blur check
+    gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
+    blur_val = cv2.Laplacian(gray, cv2.CV_64F).var()
+
+    if blur_val < 60:
+        st.error("⚠️ Image is too blurry. Hold camera steady and retake.")
+        st.stop()
+
+    return True
+
+
+# -------------------------------------------------
+# Environment
 # -------------------------------------------------
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    # If this model gives 404 in logs, switch to "gemini-pro-latest"
     gemini_model = genai.GenerativeModel("gemini-flash-latest")
 else:
     gemini_model = None
 
+
 # -------------------------------------------------
-# Load Models (safe fallback)
+# Load ML Models
 # -------------------------------------------------
 soil_model = None
 plant_model = None
-soil_model_error = None
-plant_model_error = None
 
 try:
     soil_model = keras.models.load_model("models/soil_moisture_model.keras")
-except Exception as e:
-    soil_model_error = str(e)
+except:
+    soil_model = None
 
 try:
     plant_model = keras.models.load_model("models/plant_disease_model.keras")
-except Exception as e:
-    plant_model_error = str(e)
+except:
+    plant_model = None
+
 
 # -------------------------------------------------
 # Labels
 # -------------------------------------------------
-soil_class_labels = {
-    0: "dry",
-    1: "moist",
-    2: "wet"
-}
+soil_class_labels = {0:"dry", 1:"moist", 2:"wet"}
 
 plant_class_labels = {
-    0: "Corn (Cercospora leaf spot - Gray leaf spot)",
-    1: "Corn (Common rust)",
-    2: "Corn (Northern Leaf Blight)",
-    3: "Corn (Healthy)",
-    4: "Pepper (Bacterial spot)",
-    5: "Pepper (Healthy)",
-    6: "Potato (Early blight)",
-    7: "Potato (Late blight)",
-    8: "Potato (Healthy)",
-    10: "Strawberry (Leaf scorch)",
-    11: "Strawberry (Healthy)",
-    12: "Tomato (Bacterial spot)",
-    13: "Tomato (Early blight)",
-    14: "Tomato (Late blight)",
-    15: "Tomato (Leaf Mold)",
-    16: "Tomato (Septoria leaf spot)",
-    17: "Tomato (Spider mites / Two-spotted spider mite)",
-    18: "Tomato (Target Spot)",
-    19: "Tomato (Yellow Leaf Curl Virus)",
-    20: "Tomato (Mosaic virus)",
-    21: "Tomato (Healthy)"
+    0:"Corn (Cercospora leaf spot - Gray leaf spot)",
+    1:"Corn (Common rust)",
+    2:"Corn (Northern Leaf Blight)",
+    3:"Corn (Healthy)",
+    4:"Pepper (Bacterial spot)",
+    5:"Pepper (Healthy)",
+    6:"Potato (Early blight)",
+    7:"Potato (Late blight)",
+    8:"Potato (Healthy)",
+    10:"Strawberry (Leaf scorch)",
+    11:"Strawberry (Healthy)",
+    12:"Tomato (Bacterial spot)",
+    13:"Tomato (Early blight)",
+    14:"Tomato (Late blight)",
+    15:"Tomato (Leaf Mold)",
+    16:"Tomato (Septoria leaf spot)",
+    17:"Tomato (Spider mites / Two-spotted spider mite)",
+    18:"Tomato (Target Spot)",
+    19:"Tomato (Yellow Leaf Curl Virus)",
+    20:"Tomato (Mosaic virus)",
+    21:"Tomato (Healthy)"
 }
 
-# -------------------------------------------------
-# Image Preprocessing
-# -------------------------------------------------
-def preprocess_image(img: Image.Image, target_size=(150, 150)):
-    img = img.resize(target_size)
-    arr = np.array(img).astype("float32") / 255.0
-    arr = np.expand_dims(arr, axis=0)
-    return arr
 
 # -------------------------------------------------
-# Prediction logic
+# Predict functions
 # -------------------------------------------------
-def predict_soil(img: Image.Image):
-    if soil_model is None:
-        return f"[Soil model not loaded: {soil_model_error}]", 0.0
+def preprocess_image(img: Image.Image, size=(150,150)):
+    img = img.resize(size)
+    arr = np.array(img).astype("float32")/255.0
+    return np.expand_dims(arr,0)
+
+def predict_soil(img):
     preds = soil_model.predict(preprocess_image(img))
     idx = int(np.argmax(preds[0]))
-    prob = float(preds[0][idx])
-    label = soil_class_labels.get(idx, "Unknown")
-    return label, prob
+    return soil_class_labels[idx], float(preds[0][idx])
 
-def predict_plant(img: Image.Image):
-    if plant_model is None:
-        return f"[Plant model not loaded: {plant_model_error}]", 0.0
+def predict_plant(img):
     preds = plant_model.predict(preprocess_image(img))
     idx = int(np.argmax(preds[0]))
-    prob = float(preds[0][idx])
-    label = plant_class_labels.get(idx, "Unknown")
-    return label, prob
+    return plant_class_labels[idx], float(preds[0][idx])
+
 
 # -------------------------------------------------
-# Gemini Advice (English + Arabic)
+# Explain prediction
 # -------------------------------------------------
-def explain_prediction(label: str, category: str) -> str:
+def explain_prediction(label, category):
     if not gemini_model:
-        return (
-            "🌐 Gemini is not configured. Add your GEMINI_API_KEY in Streamlit Secrets."
-        )
-
-    prompt = (
-        f"You are an experienced agricultural field advisor who helps farmers in real conditions. "
-        f"The AI system predicted {category} = \"{label}\".\n\n"
-        f"Your job:\n"
-        f"1. Explain what this result means and why it matters.\n"
-        f"2. Give clear, practical next steps the farmer should take in the next 24 hours.\n"
-        f"3. Give prevention tips for the next few days.\n"
-        f"4. If it is a disease, explain if the crop should be isolated, sprayed, pruned, or monitored.\n"
-        f"5. If it is soil moisture, give watering guidance: how much, how often, and what to watch for.\n\n"
-        f"Answer in TWO sections:\n\n"
-        f"### English Explanation\n"
-        f"- Write in simple English for a non-technical farmer.\n"
-        f"- Use bullet points for actions.\n\n"
-        f"### Arabic Explanation (الفهم بالعربية)\n"
-        f"- اكتب شرحاً تفصيلياً باللغة العربية الفصحى السهلة.\n"
-        f"- استخدم نقاط واضحة لخطوات العمل.\n"
-        f"- اجعل النص عملي جداً (مثل: اسقِ التربة الآن / افحص الأوراق غداً / اعزل النبتة إذا كانت مصابة).\n"
-    )
-
+        return "Gemini not configured."
+    prompt = f"""
+Explain {category}: {label}
+in English and Arabic
+with steps and next actions.
+"""
     try:
-        resp = gemini_model.generate_content(prompt)
-        text = (resp.text or "").strip()
-        return text if text else "No explanation generated."
-    except Exception as e:
-        return f"Gemini explanation unavailable right now: {e}"
+        return gemini_model.generate_content(prompt).text
+    except:
+        return "Gemini error."
+
 
 # -------------------------------------------------
-# Layout: Input / Preview Columns
+# UI
 # -------------------------------------------------
-left_col, right_col = st.columns([1, 1], gap="large")
+st.title("🌿 Nabta AI")
 
-with left_col:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<h3>📥 Input Image</h3>', unsafe_allow_html=True)
+img = None
 
-    input_method = st.radio(
-        "Choose how to provide an image:",
-        ("Upload Image", "Use Camera")
-    )
+choice = st.radio("Image input:", ["Upload", "Camera"])
 
-    img = None
-    if input_method == "Upload Image":
-        uploaded = st.file_uploader(
-            "Upload a soil or plant image",
-            type=["jpg", "jpeg", "png"]
-        )
-        if uploaded:
-            img = Image.open(uploaded).convert("RGB")
-    else:
-        cam_img = st.camera_input("Take a live photo")
-        if cam_img:
-            img = Image.open(cam_img).convert("RGB")
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with right_col:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<h3>Preview & Task</h3>', unsafe_allow_html=True)
-
-    if img is not None:
-        st.image(img, caption="Preview", use_column_width=True)
-    else:
-        st.markdown(
-            '<div class="warning-box">No image yet. Upload or take a photo.</div>',
-            unsafe_allow_html=True
-        )
-
-    st.markdown('<div class="section-title">What do you want to analyze?</div>', unsafe_allow_html=True)
-    task_type = st.radio(
-        "",
-        ["Soil Moisture", "Plant Disease"],
-        horizontal=True
-    )
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-st.markdown("---")
-
-# -------------------------------------------------
-# Analyze button row
-# -------------------------------------------------
-analyze_clicked = False
-if img is not None:
-    with st.container():
-        st.markdown('<div class="analyze-button">', unsafe_allow_html=True)
-        analyze_clicked = st.button("Analyze Image with Nabta")
-        st.markdown('</div>', unsafe_allow_html=True)
+if choice=="Upload":
+    uploaded = st.file_uploader("Upload an image", type=["jpg","png","jpeg"])
+    if uploaded:
+        img = Image.open(uploaded).convert("RGB")
 else:
-    st.markdown(
-        '<div class="warning-box">Please provide an image first to run analysis.</div>',
-        unsafe_allow_html=True
-    )
+    cam = st.camera_input("Take a photo")
+    if cam:
+        img = Image.open(cam).convert("RGB")
 
-# -------------------------------------------------
-# Results Section
-# -------------------------------------------------
-if analyze_clicked and img is not None:
-    with st.spinner("Analyzing image and generating advice..."):
-        if task_type == "Soil Moisture":
-            label, prob = predict_soil(img)
-            explanation_raw = explain_prediction(label, "soil moisture")
-        else:
-            label, prob = predict_plant(img)
-            explanation_raw = explain_prediction(label, "plant disease")
+task_type = st.radio("Task:", ["Soil Moisture","Plant Disease"])
 
-    # Split English / Arabic for nicer layout
-    english_part = ""
-    arabic_part = ""
+if img:
+    st.image(img,use_column_width=True)
 
-    if "### Arabic Explanation" in explanation_raw:
-        parts = explanation_raw.split("### Arabic Explanation")
-        english_part = parts[0].replace("### English Explanation", "").strip()
-        arabic_part = parts[1].strip()
+if st.button("Analyze") and img:
+
+    validate_image(img)
+
+    category = detect_category(img)
+
+    if task_type=="Soil Moisture" and category!="soil":
+        st.error("⚠️ This image does not appear to be soil.")
+        st.stop()
+
+    if task_type=="Plant Disease" and category!="plant":
+        st.error("⚠️ This image does not appear to be a plant leaf.")
+        st.stop()
+
+    if task_type=="Soil Moisture":
+        label,prob = predict_soil(img)
     else:
-        english_part = explanation_raw
+        label,prob = predict_plant(img)
 
-    # ✅ White text prediction card (inline style so Streamlit doesn't override)
-    st.markdown(
-        f"""
-        <div class="result-card">
-            <div class="result-label">
-                ✅ Prediction:
-                <span style="color:#ffffff;">{label}</span>
-            </div>
-            <div class="confidence">
-                Confidence: {prob:.2f}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.success(f"Prediction: {label} (confidence {prob:.2f})")
 
-    # English advice box
-    st.markdown('<div class="advice-wrapper">', unsafe_allow_html=True)
-    st.markdown('<div class="advice-header">English Guidance</div>', unsafe_allow_html=True)
-    st.markdown(english_part, unsafe_allow_html=False)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # Arabic advice box
-    if arabic_part:
-        st.markdown('<div class="rtl-block">', unsafe_allow_html=True)
-        st.markdown('<b>الإرشادات بالعربية</b><br>', unsafe_allow_html=True)
-        st.markdown(arabic_part, unsafe_allow_html=False)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-
-
-
+    st.write(explain_prediction(label,task_type.lower()))
