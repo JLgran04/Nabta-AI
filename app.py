@@ -1,10 +1,22 @@
 import os
+from datetime import datetime
+
 import streamlit as st
 import numpy as np
 from PIL import Image
 import keras
 import google.generativeai as genai
 from dotenv import load_dotenv
+
+# Image quality validation
+import cv2
+
+# Auto scene classifier (MobileNet) – used only to check SOIL, not plant
+import tensorflow as tf
+from tensorflow.keras.applications.mobilenet_v2 import (
+    MobileNetV2, preprocess_input, decode_predictions
+)
+
 
 # -------------------------------------------------
 # Page Configuration
@@ -16,7 +28,75 @@ st.set_page_config(
 )
 
 # -------------------------------------------------
-# Custom UI Styles
+# Load scene classifier (automatic detection, for soil only)
+# -------------------------------------------------
+scene_model = MobileNetV2(weights="imagenet")
+
+
+def detect_category(img: Image.Image) -> str:
+    """
+    Use MobileNetV2 to guess if the image is soil / ground / earth.
+    We DO NOT block plant leaves using this, only soil mistakes.
+    """
+    arr = img.resize((224, 224))
+    arr = np.array(arr).astype("float32")
+    arr = np.expand_dims(arr, axis=0)
+    arr = preprocess_input(arr)
+
+    preds = scene_model.predict(arr, verbose=0)
+    decoded = decode_predictions(preds, top=5)[0]
+
+    labels = [d[1].lower() for d in decoded]
+    scores = [d[2] for d in decoded]
+
+    text = " ".join(labels)
+
+    soil_words = ["soil", "ground", "earth", "mud", "dirt", "sand"]
+
+    # If any soil-related label appears → treat as soil
+    if any(w in text for w in soil_words):
+        return "soil"
+
+    # If model is very unsure → unknown
+    if max(scores) < 0.20:
+        return "unknown"
+
+    # Otherwise: unknown (we don't trust ImageNet for plant leaves)
+    return "unknown"
+
+
+# -------------------------------------------------
+# Camera & Image validation
+# -------------------------------------------------
+def validate_image(img: Image.Image):
+    """
+    Check brightness, resolution, and blur before prediction.
+    """
+    arr = np.array(img)
+
+    # Lighting check
+    if arr.mean() < 25:
+        st.error("⚠️ Image is too dark. Turn on more light and retake the photo.")
+        st.stop()
+
+    # Resolution check
+    if arr.shape[0] < 200 or arr.shape[1] < 200:
+        st.error("⚠️ Image resolution is too low. Please take a clearer picture (zoom in closer).")
+        st.stop()
+
+    # Blur check
+    gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
+    blur_val = cv2.Laplacian(gray, cv2.CV_64F).var()
+
+    if blur_val < 60:
+        st.error("⚠️ Image is too blurry. Hold the camera steady and retake the photo.")
+        st.stop()
+
+    return True
+
+
+# -------------------------------------------------
+# Custom UI Styles (your original CSS)
 # -------------------------------------------------
 st.markdown(
     """
@@ -153,10 +233,24 @@ st.markdown(
         padding: .8rem 1rem;
         font-size: .9rem;
     }
+
+    /* Top bar for role info */
+    .topbar {
+        margin-bottom: 1rem;
+        padding: 0.6rem 1rem;
+        background: #e8f5e9;
+        border-radius: 10px;
+        border: 1px solid #c8e6c9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.9rem;
+    }
     </style>
     """,
     unsafe_allow_html=True
 )
+
 
 # -------------------------------------------------
 # Header
@@ -171,6 +265,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
 # -------------------------------------------------
 # Environment / API Key
 # -------------------------------------------------
@@ -183,6 +278,7 @@ if GEMINI_API_KEY:
     gemini_model = genai.GenerativeModel("gemini-flash-latest")
 else:
     gemini_model = None
+
 
 # -------------------------------------------------
 # Load Models (safe fallback)
@@ -201,6 +297,7 @@ try:
     plant_model = keras.models.load_model("models/plant_disease_model.keras")
 except Exception as e:
     plant_model_error = str(e)
+
 
 # -------------------------------------------------
 # Labels
@@ -235,6 +332,7 @@ plant_class_labels = {
     21: "Tomato (Healthy)"
 }
 
+
 # -------------------------------------------------
 # Image Preprocessing
 # -------------------------------------------------
@@ -243,6 +341,7 @@ def preprocess_image(img: Image.Image, target_size=(150, 150)):
     arr = np.array(img).astype("float32") / 255.0
     arr = np.expand_dims(arr, axis=0)
     return arr
+
 
 # -------------------------------------------------
 # Prediction logic
@@ -256,6 +355,7 @@ def predict_soil(img: Image.Image):
     label = soil_class_labels.get(idx, "Unknown")
     return label, prob
 
+
 def predict_plant(img: Image.Image):
     if plant_model is None:
         return f"[Plant model not loaded: {plant_model_error}]", 0.0
@@ -264,6 +364,7 @@ def predict_plant(img: Image.Image):
     prob = float(preds[0][idx])
     label = plant_class_labels.get(idx, "Unknown")
     return label, prob
+
 
 # -------------------------------------------------
 # Gemini Advice (English + Arabic)
@@ -300,125 +401,344 @@ def explain_prediction(label: str, category: str) -> str:
     except Exception as e:
         return f"Gemini explanation unavailable right now: {e}"
 
-# -------------------------------------------------
-# Layout: Input / Preview Columns
-# -------------------------------------------------
-left_col, right_col = st.columns([1, 1], gap="large")
 
-with left_col:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<h3>📥 Input Image</h3>', unsafe_allow_html=True)
+# -------------------------------------------------
+# Session state for fake login + history + notifications
+# -------------------------------------------------
+if "role" not in st.session_state:
+    st.session_state.role = None  # "admin" or "farmer"
 
-    input_method = st.radio(
-        "Choose how to provide an image:",
-        ("Upload Image", "Use Camera")
+if "history" not in st.session_state:
+    st.session_state.history = []  # list of scan dicts
+
+if "notifications" not in st.session_state:
+    st.session_state.notifications = []  # list of strings
+
+
+# -------------------------------------------------
+# Fake login (no database)
+# -------------------------------------------------
+def show_login():
+    st.subheader("🔐 Login")
+
+    st.write("Use demo accounts:")
+    st.write("- **admin / admin123**")
+    st.write("- **farmer / farmer123**")
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        if username == "admin" and password == "admin123":
+            st.session_state.role = "admin"
+            st.success("Logged in as admin ✅")
+        elif username == "farmer" and password == "farmer123":
+            st.session_state.role = "farmer"
+            st.success("Logged in as farmer ✅")
+        else:
+            st.error("❌ Wrong username or password")
+
+
+# If no role yet → show login and stop app
+if st.session_state.role is None:
+    show_login()
+    st.stop()
+
+
+# -------------------------------------------------
+# Top bar with role + logout + navigation
+# -------------------------------------------------
+col_a, col_b = st.columns([3, 1])
+with col_a:
+    st.markdown(
+        f"""
+        <div class="topbar">
+            <div>
+                Logged in as: <b>{st.session_state.role.upper()}</b>
+            </div>
+        """,
+        unsafe_allow_html=True,
+    )
+with col_b:
+    logout = st.button("Logout")
+    if logout:
+        st.session_state.role = None
+        st.experimental_rerun()
+st.markdown("</div>", unsafe_allow_html=True)
+
+# Sidebar navigation changes based on role
+if st.session_state.role == "farmer":
+    page = st.sidebar.radio(
+        "Farmer Menu",
+        ["Scan Plant/Soil", "History", "Notifications"],
+    )
+else:
+    page = st.sidebar.radio(
+        "Admin Menu",
+        ["Scan (Test)", "All Scans", "Export Statistics", "Manage Farmers"],
     )
 
+
+# -------------------------------------------------
+# Farmer/Admin – Scan page (main Nabta UI)
+# -------------------------------------------------
+def show_scan_page():
+    # Layout: Input / Preview Columns
+    left_col, right_col = st.columns([1, 1], gap="large")
+
     img = None
-    if input_method == "Upload Image":
-        uploaded = st.file_uploader(
-            "Upload a soil or plant image",
-            type=["jpg", "jpeg", "png"]
+
+    with left_col:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<h3>📥 Input Image</h3>', unsafe_allow_html=True)
+
+        input_method = st.radio(
+            "Choose how to provide an image:",
+            ("Upload Image", "Use Camera")
         )
-        if uploaded:
-            img = Image.open(uploaded).convert("RGB")
-    else:
-        cam_img = st.camera_input("Take a live photo")
-        if cam_img:
-            img = Image.open(cam_img).convert("RGB")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+        if input_method == "Upload Image":
+            uploaded = st.file_uploader(
+                "Upload a soil or plant image",
+                type=["jpg", "jpeg", "png"]
+            )
+            if uploaded:
+                img = Image.open(uploaded).convert("RGB")
+        else:
+            cam_img = st.camera_input("Take a live photo")
+            if cam_img:
+                img = Image.open(cam_img).convert("RGB")
 
-with right_col:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<h3>Preview & Task</h3>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
+    with right_col:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<h3>Preview & Task</h3>', unsafe_allow_html=True)
+
+        if img is not None:
+            st.image(img, caption="Preview", use_container_width=True)
+        else:
+            st.markdown(
+                '<div class="warning-box">No image yet. Upload or take a photo.</div>',
+                unsafe_allow_html=True
+            )
+
+        st.markdown('<div class="section-title">What do you want to analyze?</div>', unsafe_allow_html=True)
+        task_type = st.radio(
+            "",
+            ["Soil Moisture", "Plant Disease"],
+            horizontal=True
+        )
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Analyze button row
+    analyze_clicked = False
     if img is not None:
-        st.image(img, caption="Preview", use_container_width=True)
+        with st.container():
+            st.markdown('<div class="analyze-button">', unsafe_allow_html=True)
+            analyze_clicked = st.button("Analyze Image with Nabta")
+            st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.markdown(
-            '<div class="warning-box">No image yet. Upload or take a photo.</div>',
+            '<div class="warning-box">Please provide an image first to run analysis.</div>',
             unsafe_allow_html=True
         )
 
-    st.markdown('<div class="section-title">What do you want to analyze?</div>', unsafe_allow_html=True)
-    task_type = st.radio(
-        "",
-        ["Soil Moisture", "Plant Disease"],
-        horizontal=True
-    )
+    # Results Section
+    if analyze_clicked and img is not None:
 
-    st.markdown('</div>', unsafe_allow_html=True)
+        # 1) quality validation
+        validate_image(img)
 
-st.markdown("---")
+        # 2) scene detection for SOIL ONLY
+        category = detect_category(img)
 
-# -------------------------------------------------
-# Analyze button row
-# -------------------------------------------------
-analyze_clicked = False
-if img is not None:
-    with st.container():
-        st.markdown('<div class="analyze-button">', unsafe_allow_html=True)
-        analyze_clicked = st.button("Analyze Image with Nabta")
-        st.markdown('</div>', unsafe_allow_html=True)
-else:
-    st.markdown(
-        '<div class="warning-box">Please provide an image first to run analysis.</div>',
-        unsafe_allow_html=True
-    )
+        if task_type == "Soil Moisture" and category != "soil":
+            st.error("⚠️ This image doesn’t look like soil. Please upload a clear soil picture.")
+            st.stop()
 
-# -------------------------------------------------
-# Results Section
-# -------------------------------------------------
-if analyze_clicked and img is not None:
-    with st.spinner("Analyzing image and generating advice..."):
-        if task_type == "Soil Moisture":
-            label, prob = predict_soil(img)
-            explanation_raw = explain_prediction(label, "soil moisture")
+        with st.spinner("Analyzing image and generating advice..."):
+            if task_type == "Soil Moisture":
+                label, prob = predict_soil(img)
+                if prob < 0.60:
+                    st.error(
+                        "⚠️ This does not seem to be soil or the model is not confident. "
+                        "Try another picture closer to the soil."
+                    )
+                    st.stop()
+                explanation_raw = explain_prediction(label, "soil moisture")
+            else:
+                # For PLANT: we trust your plant model; no MobileNet restriction
+                label, prob = predict_plant(img)
+                if prob < 0.60:
+                    st.error(
+                        "⚠️ The model is not confident this is a supported crop leaf. "
+                        "Try a closer, clearer picture of the leaf."
+                    )
+                    st.stop()
+                explanation_raw = explain_prediction(label, "plant disease")
+
+        # Save to fake history
+        scan_record = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "user_role": st.session_state.role,
+            "task_type": task_type,
+            "label": label,
+            "confidence": prob,
+        }
+        st.session_state.history.append(scan_record)
+
+        # Simple notification rule: high-confidence plant disease
+        if task_type == "Plant Disease" and "Healthy" not in label and prob >= 0.75:
+            note = f"[{scan_record['timestamp']}] Possible issue detected: {label} (confidence {prob:.2f})"
+            st.session_state.notifications.append(note)
+
+        # Split English / Arabic for nicer layout
+        english_part = ""
+        arabic_part = ""
+
+        if "### Arabic Explanation" in explanation_raw:
+            parts = explanation_raw.split("### Arabic Explanation")
+            english_part = parts[0].replace("### English Explanation", "").strip()
+            arabic_part = parts[1].strip()
         else:
-            label, prob = predict_plant(img)
-            explanation_raw = explain_prediction(label, "plant disease")
+            english_part = explanation_raw
 
-    # Split English / Arabic for nicer layout
-    english_part = ""
-    arabic_part = ""
-
-    if "### Arabic Explanation" in explanation_raw:
-        parts = explanation_raw.split("### Arabic Explanation")
-        english_part = parts[0].replace("### English Explanation", "").strip()
-        arabic_part = parts[1].strip()
-    else:
-        english_part = explanation_raw
-
-    # ✅ White text prediction card (inline style so Streamlit doesn't override)
-    st.markdown(
-        f"""
-        <div class="result-card">
-            <div class="result-label">
-                ✅ Prediction:
-                <span style="color:#ffffff;">{label}</span>
+        # Result card
+        st.markdown(
+            f"""
+            <div class="result-card">
+                <div class="result-label">
+                    ✅ Prediction:
+                    <span style="color:#ffffff;">{label}</span>
+                </div>
+                <div class="confidence">
+                    Confidence: {prob:.2f}
+                </div>
             </div>
-            <div class="confidence">
-                Confidence: {prob:.2f}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+            """,
+            unsafe_allow_html=True
+        )
 
-    # English advice box
-    st.markdown('<div class="advice-wrapper">', unsafe_allow_html=True)
-    st.markdown('<div class="advice-header">English Guidance</div>', unsafe_allow_html=True)
-    st.markdown(english_part, unsafe_allow_html=False)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # Arabic advice box
-    if arabic_part:
-        st.markdown('<div class="rtl-block">', unsafe_allow_html=True)
-        st.markdown('<b>الإرشادات بالعربية</b><br>', unsafe_allow_html=True)
-        st.markdown(arabic_part, unsafe_allow_html=False)
+        # English advice
+        st.markdown('<div class="advice-wrapper">', unsafe_allow_html=True)
+        st.markdown('<div class="advice-header">English Guidance</div>', unsafe_allow_html=True)
+        st.markdown(english_part, unsafe_allow_html=False)
         st.markdown('</div>', unsafe_allow_html=True)
 
+        # Arabic advice
+        if arabic_part:
+            st.markdown('<div class="rtl-block">', unsafe_allow_html=True)
+            st.markdown('<b>الإرشادات بالعربية</b><br>', unsafe_allow_html=True)
+            st.markdown(arabic_part, unsafe_allow_html=False)
+            st.markdown('</div>', unsafe_allow_html=True)
 
 
+# -------------------------------------------------
+# Farmer views
+# -------------------------------------------------
+def show_farmer_history():
+    st.subheader("📜 Your Scan History (this session only)")
+    if not st.session_state.history:
+        st.info("No scans yet. Go to 'Scan Plant/Soil' to analyze your first image.")
+        return
 
+    for item in reversed(st.session_state.history):
+        st.write(f"**{item['timestamp']}** – {item['task_type']} → {item['label']} (confidence {item['confidence']:.2f})")
+
+
+def show_farmer_notifications():
+    st.subheader("🔔 Notifications (this session only)")
+    if not st.session_state.notifications:
+        st.info("No notifications yet. When a serious disease is detected with high confidence, it will appear here.")
+        return
+
+    for note in reversed(st.session_state.notifications):
+        st.write("• " + note)
+
+
+# -------------------------------------------------
+# Admin views
+# -------------------------------------------------
+def show_admin_all_scans():
+    st.subheader("📊 All Scans (session)")
+    if not st.session_state.history:
+        st.info("No scans have been made in this session.")
+        return
+
+    for item in reversed(st.session_state.history):
+        st.write(
+            f"**{item['timestamp']}** – {item['user_role']} – "
+            f"{item['task_type']} → {item['label']} (conf {item['confidence']:.2f})"
+        )
+
+
+def show_admin_export():
+    st.subheader("📤 Export Statistics (session only)")
+
+    if not st.session_state.history:
+        st.info("No scans to export yet.")
+        return
+
+    import csv
+    from io import StringIO
+
+    csv_buffer = StringIO()
+    writer = csv.writer(csv_buffer)
+    writer.writerow(["timestamp", "user_role", "task_type", "label", "confidence"])
+    for item in st.session_state.history:
+        writer.writerow([
+            item["timestamp"],
+            item["user_role"],
+            item["task_type"],
+            item["label"],
+            f"{item['confidence']:.4f}",
+        ])
+
+    st.download_button(
+        label="Download CSV",
+        data=csv_buffer.getvalue(),
+        file_name="nabta_scans_session.csv",
+        mime="text/csv",
+    )
+    st.success("CSV generated for this session.")
+
+
+def show_admin_manage_farmers():
+    st.subheader("👥 Manage Farmers (fake – no database)")
+
+    st.write(
+        """
+        In this demo version there is no real database of farmers.
+        You can describe here in your report what will be implemented later:
+        - list of farmers
+        - block / unblock farmer
+        - view farmer activity
+        - send broadcast notification
+        """
+    )
+
+
+# -------------------------------------------------
+# ROUTING based on role + sidebar selection
+# -------------------------------------------------
+if st.session_state.role == "farmer":
+    if page == "Scan Plant/Soil":
+        show_scan_page()
+    elif page == "History":
+        show_farmer_history()
+    elif page == "Notifications":
+        show_farmer_notifications()
+
+else:  # admin
+    if page == "Scan (Test)":
+        show_scan_page()
+    elif page == "All Scans":
+        show_admin_all_scans()
+    elif page == "Export Statistics":
+        show_admin_export()
+    elif page == "Manage Farmers":
+        show_admin_manage_farmers()
