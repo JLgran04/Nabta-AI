@@ -21,7 +21,7 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    ... EXACTLY SAME CSS ...
+    YOUR CSS REMAINS THE SAME !!
     </style>
     """,
     unsafe_allow_html=True
@@ -73,8 +73,35 @@ except Exception as e:
 # -------------------------------------------------
 # Labels
 # -------------------------------------------------
-soil_class_labels = { ... }
-plant_class_labels = { ... }
+soil_class_labels = {
+    0: "dry",
+    1: "moist",
+    2: "wet"
+}
+
+plant_class_labels = {
+    0: "Corn (Cercospora leaf spot - Gray leaf spot)",
+    1: "Corn (Common rust)",
+    2: "Corn (Northern Leaf Blight)",
+    3: "Corn (Healthy)",
+    4: "Pepper (Bacterial spot)",
+    5: "Pepper (Healthy)",
+    6: "Potato (Early blight)",
+    7: "Potato (Late blight)",
+    8: "Potato (Healthy)",
+    10: "Strawberry (Leaf scorch)",
+    11: "Strawberry (Healthy)",
+    12: "Tomato (Bacterial spot)",
+    13: "Tomato (Early blight)",
+    14: "Tomato (Late blight)",
+    15: "Tomato (Leaf Mold)",
+    16: "Tomato (Septoria leaf spot)",
+    17: "Tomato (Spider mites / Two-spotted spider mite)",
+    18: "Tomato (Target Spot)",
+    19: "Tomato (Yellow Leaf Curl Virus)",
+    20: "Tomato (Mosaic virus)",
+    21: "Tomato (Healthy)"
+}
 
 # -------------------------------------------------
 # Image Preprocessing
@@ -89,9 +116,22 @@ def preprocess_image(img: Image.Image, target_size=(150, 150)):
 # Prediction logic
 # -------------------------------------------------
 def predict_soil(img: Image.Image):
-    ...
+    if soil_model is None:
+        return f"[Soil model not loaded: {soil_model_error}]", 0.0
+    preds = soil_model.predict(preprocess_image(img))
+    idx = int(np.argmax(preds[0]))
+    prob = float(preds[0][idx])
+    label = soil_class_labels.get(idx, "Unknown")
+    return label, prob
+
 def predict_plant(img: Image.Image):
-    ...
+    if plant_model is None:
+        return f"[Plant model not loaded: {plant_model_error}]", 0.0
+    preds = plant_model.predict(preprocess_image(img))
+    idx = int(np.argmax(preds[0]))
+    prob = float(preds[0][idx])
+    label = plant_class_labels.get(idx, "Unknown")
+    return label, prob
 
 # -------------------------------------------------
 # Gemini Advice (English + Arabic)
@@ -124,7 +164,6 @@ def explain_prediction(label: str, category: str) -> str:
     try:
         resp = gemini_model.generate_content(prompt)
 
-        # 🔥 NEW SAFE GEMINI TEXT EXTRACTION
         if resp.candidates and resp.candidates[0].content.parts:
             text = resp.candidates[0].content.parts[0].text
             return text.strip() if text else "No explanation generated."
@@ -138,6 +177,3 @@ def explain_prediction(label: str, category: str) -> str:
 # Layout: Input / Preview Columns
 # -------------------------------------------------
 left_col, right_col = st.columns([1, 1], gap="large")
-
-... EVERYTHING BELOW REMAINS EXACTLY THE SAME ...
-
