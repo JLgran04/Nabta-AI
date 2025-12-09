@@ -164,6 +164,7 @@ def explain_prediction(label: str, category: str) -> str:
     try:
         resp = gemini_model.generate_content(prompt)
 
+        # 🔥 NEW SAFE GEMINI TEXT EXTRACTION
         if resp.candidates and resp.candidates[0].content.parts:
             text = resp.candidates[0].content.parts[0].text
             return text.strip() if text else "No explanation generated."
