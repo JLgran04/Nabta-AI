@@ -641,7 +641,7 @@ def show_scan_page():
 # Farmer views
 # -------------------------------------------------
 def show_farmer_history():
-    st.subheader("📜 Your Scan History (this session only)")
+    st.subheader("📜 Your Scan History: ")
     if not st.session_state.history:
         st.info("No scans yet. Go to 'Scan Plant/Soil' to analyze your first image.")
         return
@@ -708,14 +708,13 @@ def show_admin_export():
 
 
 def show_admin_manage_farmers():
-    st.subheader("👥 Manage Farmers (fake – no database)")
+    st.subheader("👥 Manage Farmers")
 
     st.write(
         """
-        In this demo version there is no real database of farmers.
-        You can describe here in your report what will be implemented later:
+        In this demo version, there is no real database of farmers.
         - list of farmers
-        - block / unblock farmer
+        - Add / Delete farmer
         - view farmer activity
         - send broadcast notification
         """
@@ -742,3 +741,4 @@ else:  # admin
         show_admin_export()
     elif page == "Manage Farmers":
         show_admin_manage_farmers()
+
