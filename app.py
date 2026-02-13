@@ -5,19 +5,88 @@ from PIL import Image
 import keras
 import google.generativeai as genai
 from dotenv import load_dotenv
+from db import create_table
+from auth import create_user, login_user, get_all_users, delete_user
 
-# -------------------------------------------------
 # Page Configuration
-# -------------------------------------------------
 st.set_page_config(
     page_title="Nabta AI",
     page_icon="🌿",
     layout="wide"
 )
 
-# -------------------------------------------------
+create_table()
+
+# Session State
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "role" not in st.session_state:
+    st.session_state.role = None
+
+menu = ["Login", "Register"]
+choice = st.sidebar.selectbox("Menu", menu)
+
+# REGISTER 
+if choice == "Register":
+    st.subheader("Create Account")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Register"):
+        if create_user(username, password, role="user"):
+            st.success("Account created successfully!")
+        else:
+            st.error("Username already exists.")
+
+# LOGIN 
+elif choice == "Login":
+    st.subheader("Login")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        role = login_user(username, password)
+        if role:
+            st.session_state.logged_in = True
+            st.session_state.role = role
+            st.success(f"Logged in as {role}")
+        else:
+            st.error("Invalid credentials")
+
+# Security
+if st.session_state.logged_in:
+
+    st.sidebar.success(f"Role: {st.session_state.role}")
+
+    if st.sidebar.button("Logout"):
+        st.session_state.logged_in = False
+        st.session_state.role = None
+        st.experimental_rerun()
+
+    # ADMIN Page 
+    if st.session_state.role == "admin":
+        st.title("Admin Dashboard")
+
+        st.subheader("All Users")
+        users = get_all_users()
+
+        for user in users:
+            user_id, username, role = user
+            col1, col2, col3 = st.columns([3,2,1])
+            col1.write(username)
+            col2.write(role)
+
+            if role != "admin":  # Prevent deleting admin
+                if col3.button("Delete", key=user_id):
+                    delete_user(user_id)
+                    st.experimental_rerun()
+
+    # USER Page 
+    elif st.session_state.role == "user":
+        st.title("User Dashboard")
+        st.write("Welcome to your application 🎉")
+
 # Custom UI Styles
-# -------------------------------------------------
 st.markdown(
     """
     <style>
