@@ -182,9 +182,15 @@ def show_auth_page():
             if role:
                 st.session_state.logged_in = True
                 st.session_state.role = role
-                st.experimental_rerun()
+                st.session_state.rerun_flag = True  # <-- flag to trigger rerun
             else:
                 st.error("Invalid credentials")
+
+# Outside function, top-level rerun
+if st.session_state.get("rerun_flag", False):
+    st.session_state.rerun_flag = False
+    st.experimental_rerun()
+
 
 # -------------------------------------------------
 # Admin Page
@@ -305,3 +311,4 @@ elif st.session_state.role == "admin":
     show_admin_page()
 else:
     show_user_page()
+
