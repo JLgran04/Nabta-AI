@@ -8,30 +8,25 @@ from dotenv import load_dotenv
 from db import create_table
 from auth import create_user, login_user, get_all_users, delete_user
 
-# -------------------------------
-# Page Config
-# -------------------------------
-st.set_page_config(
-    page_title="Nabta AI",
-    page_icon="🌿",
-    layout="wide"
-)
-
-# -------------------------------
-# Initialize DB & Session State
-# -------------------------------
+# ----------------------------
+# Page Config & DB
+# ----------------------------
+st.set_page_config(page_title="Nabta AI", page_icon="🌿", layout="wide")
 create_table()
 
+# ----------------------------
+# Session State
+# ----------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "role" not in st.session_state:
     st.session_state.role = None
-if "show_dashboard" not in st.session_state:
-    st.session_state.show_dashboard = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
 
-# -------------------------------
-# Load API Keys
-# -------------------------------
+# ----------------------------
+# GEMINI API
+# ----------------------------
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 if GEMINI_API_KEY:
@@ -40,9 +35,9 @@ if GEMINI_API_KEY:
 else:
     gemini_model = None
 
-# -------------------------------
-# Load Models
-# -------------------------------
+# ----------------------------
+# Load AI Models
+# ----------------------------
 soil_model = None
 plant_model = None
 soil_model_error = None
@@ -83,13 +78,14 @@ plant_class_labels = {
     21: "Tomato (Healthy)"
 }
 
-# -------------------------------
+# ----------------------------
 # Helper Functions
-# -------------------------------
-def preprocess_image(img: Image.Image, target_size=(150,150)):
+# ----------------------------
+def preprocess_image(img: Image.Image, target_size=(150, 150)):
     img = img.resize(target_size)
     arr = np.array(img).astype("float32") / 255.0
-    return np.expand_dims(arr, axis=0)
+    arr = np.expand_dims(arr, axis=0)
+    return arr
 
 def predict_soil(img: Image.Image):
     if soil_model is None:
@@ -97,7 +93,8 @@ def predict_soil(img: Image.Image):
     preds = soil_model.predict(preprocess_image(img))
     idx = int(np.argmax(preds[0]))
     prob = float(preds[0][idx])
-    return soil_class_labels.get(idx, "Unknown"), prob
+    label = soil_class_labels.get(idx, "Unknown")
+    return label, prob
 
 def predict_plant(img: Image.Image):
     if plant_model is None:
@@ -105,61 +102,62 @@ def predict_plant(img: Image.Image):
     preds = plant_model.predict(preprocess_image(img))
     idx = int(np.argmax(preds[0]))
     prob = float(preds[0][idx])
-    return plant_class_labels.get(idx, "Unknown"), prob
+    label = plant_class_labels.get(idx, "Unknown")
+    return label, prob
 
 def explain_prediction(label: str, category: str) -> str:
     if not gemini_model:
-        return "🌐 Gemini not configured."
+        return "🌐 Gemini is not configured. Add GEMINI_API_KEY."
     prompt = (
-        f"You are an experienced agricultural advisor. Prediction: {category} = {label}.\n"
-        "Explain in English and Arabic with actionable steps."
+        f"You are an experienced agricultural advisor. "
+        f"The AI predicted {category} = \"{label}\". "
+        f"Explain meaning, actions, and prevention in English and Arabic."
     )
     try:
         resp = gemini_model.generate_content(prompt)
         if resp.candidates and resp.candidates[0].content.parts:
-            return resp.candidates[0].content.parts[0].text.strip()
+            text = resp.candidates[0].content.parts[0].text
+            return text.strip() if text else "No explanation generated."
         return "No explanation generated."
     except Exception as e:
-        return f"Gemini unavailable: {e}"
+        return f"Gemini explanation unavailable: {e}"
 
-# -------------------------------
-# AUTH PAGE
-# -------------------------------
+# ----------------------------
+# UI Pages
+# ----------------------------
 def show_auth_page():
     st.title("🌿 Nabta AI")
-    st.subheader("Login or Register")
-    choice = st.radio("Select Option", ["Login", "Register"], key="auth_choice")
+    st.markdown("### Login or Create Account")
+
+    menu = ["Login", "Register"]
+    choice = st.radio("Select Option", menu, key="auth_choice")
 
     if choice == "Register":
-        username = st.text_input("Username", key="reg_username")
-        password = st.text_input("Password", type="password", key="reg_password")
+        username = st.text_input("Username", key="reg_user")
+        password = st.text_input("Password", type="password", key="reg_pass")
         if st.button("Create Account", key="reg_btn"):
             if create_user(username, password, role="user"):
-                st.success("Account created successfully! Login now.")
+                st.success("Account created successfully!")
             else:
                 st.error("Username already exists.")
-    else:  # Login
-        username = st.text_input("Username", key="login_username")
-        password = st.text_input("Password", type="password", key="login_password")
+    elif choice == "Login":
+        username = st.text_input("Username", key="login_user")
+        password = st.text_input("Password", type="password", key="login_pass")
         if st.button("Login", key="login_btn"):
             role = login_user(username, password)
             if role:
                 st.session_state.logged_in = True
                 st.session_state.role = role
-                st.session_state.show_dashboard = True
+                st.session_state.username = username
             else:
                 st.error("Invalid credentials")
 
-# -------------------------------
-# ADMIN PAGE
-# -------------------------------
 def show_admin_page():
-    st.sidebar.success("👑 Admin")
-    if st.sidebar.button("Logout", key="logout_admin"):
+    st.sidebar.success(f"👑 Admin: {st.session_state.username}")
+    if st.sidebar.button("Logout", key="admin_logout"):
         st.session_state.logged_in = False
         st.session_state.role = None
-        st.session_state.show_dashboard = False
-
+        st.session_state.username = ""
     st.title("Admin Dashboard")
     st.subheader("Manage Users")
     users = get_all_users()
@@ -173,70 +171,82 @@ def show_admin_page():
                 delete_user(user_id)
                 st.experimental_rerun()
 
-# -------------------------------
-# USER PAGE
-# -------------------------------
 def show_user_page():
-    st.sidebar.success("🌿 User")
-    if st.sidebar.button("Logout", key="logout_user"):
+    st.sidebar.success(f"🌿 User: {st.session_state.username}")
+    if st.sidebar.button("Logout", key="user_logout"):
         st.session_state.logged_in = False
         st.session_state.role = None
-        st.session_state.show_dashboard = False
+        st.session_state.username = ""
+    st.title("Nabta AI Application")
 
-    st.title("User Dashboard")
-    st.write("Welcome to your application 🎉")
-
-    # --- Image Upload and Analysis ---
-    left_col, right_col = st.columns(2)
-    img = None
+    # Image Upload & Task
+    left_col, right_col = st.columns([1, 1], gap="large")
     with left_col:
-        method = st.radio("Image Input Method", ["Upload", "Camera"], key="img_method")
-        if method == "Upload":
-            uploaded = st.file_uploader("Upload Image", type=["jpg","jpeg","png"], key="upload_img")
-            if uploaded:
-                img = Image.open(uploaded).convert("RGB")
-                st.image(img, caption="Preview")
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<h3>📥 Input Image</h3>', unsafe_allow_html=True)
+        input_method = st.radio("Provide image:", ["Upload", "Camera"], key="input_method")
+        img = None
+        if input_method == "Upload":
+            uploaded = st.file_uploader("Upload soil/plant image", type=["jpg","jpeg","png"], key="upload_img")
+            if uploaded: img = Image.open(uploaded).convert("RGB")
         else:
-            cam_img = st.camera_input("Take Photo", key="cam_img")
-            if cam_img:
-                img = Image.open(cam_img).convert("RGB")
-                st.image(img, caption="Preview")
+            cam_img = st.camera_input("Take live photo", key="cam_img")
+            if cam_img: img = Image.open(cam_img).convert("RGB")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with right_col:
-        task_type = st.radio("Select Task", ["Soil Moisture", "Plant Disease"], key="task_radio")
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<h3>Preview & Task</h3>', unsafe_allow_html=True)
+        if img: st.image(img, caption="Preview", use_container_width=True)
+        else: st.markdown('<div class="warning-box">No image yet.</div>', unsafe_allow_html=True)
+        task_type = st.radio("What to analyze?", ["Soil Moisture", "Plant Disease"], horizontal=True, key="task_type")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    analyze_clicked = st.button("Analyze", key="analyze_btn")
-    if analyze_clicked and img:
-        if task_type == "Soil Moisture":
-            label, prob = predict_soil(img)
-            explanation = explain_prediction(label, "soil moisture")
-        else:
-            label, prob = predict_plant(img)
-            explanation = explain_prediction(label, "plant disease")
+    if img and st.button("Analyze Image", key="analyze_btn"):
+        with st.spinner("Analyzing..."):
+            if task_type == "Soil Moisture":
+                label, prob = predict_soil(img)
+                explanation = explain_prediction(label, "soil moisture")
+            else:
+                label, prob = predict_plant(img)
+                explanation = explain_prediction(label, "plant disease")
 
-        # Split English/Arabic
-        english_text, arabic_text = "", ""
+        # Split English / Arabic
+        english_part, arabic_part = "", ""
         if "### Arabic Explanation" in explanation:
             parts = explanation.split("### Arabic Explanation")
-            english_text = parts[0].replace("### English Explanation","").strip()
-            arabic_text = parts[1].strip()
+            english_part = parts[0].replace("### English Explanation", "").strip()
+            arabic_part = parts[1].strip()
         else:
-            english_text = explanation
+            english_part = explanation
 
-        st.markdown(f"**Prediction:** {label} (Confidence: {prob:.2f})")
-        st.markdown("**English Guidance:**")
-        st.markdown(english_text)
-        if arabic_text:
-            st.markdown("**الإرشادات بالعربية:**")
-            st.markdown(arabic_text)
+        # Result Card
+        st.markdown(f"""
+            <div class="result-card">
+                <div class="result-label">✅ Prediction: <span style="color:#ffffff;">{label}</span></div>
+                <div class="confidence">Confidence: {prob:.2f}</div>
+            </div>
+        """, unsafe_allow_html=True)
 
-# -------------------------------
+        # English Guidance
+        st.markdown('<div class="advice-wrapper">', unsafe_allow_html=True)
+        st.markdown('<div class="advice-header">English Guidance</div>', unsafe_allow_html=True)
+        st.markdown(english_part)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Arabic Guidance
+        if arabic_part:
+            st.markdown('<div class="rtl-block">', unsafe_allow_html=True)
+            st.markdown('<b>الإرشادات بالعربية</b><br>', unsafe_allow_html=True)
+            st.markdown(arabic_part)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+# ----------------------------
 # ROUTING
-# -------------------------------
-if not st.session_state.logged_in or not st.session_state.show_dashboard:
+# ----------------------------
+if not st.session_state.logged_in:
     show_auth_page()
-else:
-    if st.session_state.role == "admin":
-        show_admin_page()
-    else:
-        show_user_page()
+elif st.session_state.role == "admin":
+    show_admin_page()
+elif st.session_state.role == "user":
+    show_user_page()
