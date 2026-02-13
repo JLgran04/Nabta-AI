@@ -85,6 +85,81 @@ if st.session_state.logged_in:
     elif st.session_state.role == "user":
         st.title("User Dashboard")
         st.write("Welcome to your application 🎉")
+def show_auth_page():
+
+    st.title("🌿 Nabta AI")
+
+    st.markdown("### Login or Create Account")
+
+    menu = ["Login", "Register"]
+    choice = st.radio("Select Option", menu)
+
+    if choice == "Register":
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+
+        if st.button("Create Account"):
+            if create_user(username, password, role="user"):
+                st.success("Account created successfully!")
+            else:
+                st.error("Username already exists.")
+
+    if choice == "Login":
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+
+        if st.button("Login"):
+            role = login_user(username, password)
+            if role:
+                st.session_state.logged_in = True
+                st.session_state.role = role
+                st.rerun()
+            else:
+                st.error("Invalid credentials")
+def show_admin_page():
+
+    st.sidebar.success("👑 Admin")
+
+    if st.sidebar.button("Logout"):
+        st.session_state.logged_in = False
+        st.session_state.role = None
+        st.rerun()
+
+    st.title("Admin Dashboard")
+
+    st.subheader("Manage Users")
+
+    users = get_all_users()
+
+    for user in users:
+        user_id, username, role = user
+        col1, col2, col3 = st.columns([3,2,1])
+        col1.write(username)
+        col2.write(role)
+
+        if role != "admin":
+            if col3.button("Delete", key=f"del_{user_id}"):
+                delete_user(user_id)
+                st.rerun()
+                
+def show_user_page():
+
+    st.sidebar.success("🌿 User")
+
+    if st.sidebar.button("Logout"):
+        st.session_state.logged_in = False
+        st.session_state.role = None
+        st.rerun()
+
+# ROUTING
+
+if not st.session_state.logged_in:
+    show_auth_page()
+else:
+    if st.session_state.role == "admin":
+        show_admin_page()
+    elif st.session_state.role == "user":
+        show_user_page()
 
 # Custom UI Styles
 st.markdown(
@@ -494,6 +569,8 @@ if analyze_clicked and img is not None:
         st.markdown('<b>الإرشادات بالعربية</b><br>', unsafe_allow_html=True)
         st.markdown(arabic_part, unsafe_allow_html=False)
         st.markdown('</div>', unsafe_allow_html=True)
+
+
 
 
 
