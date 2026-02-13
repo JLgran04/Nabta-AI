@@ -288,9 +288,5 @@ else:
     elif st.session_state.role == "user":
         show_user_page()
 
-# -------------------------------------------------
-# ---------------- SAFE RERUN --------------------
-# -------------------------------------------------
-if st.session_state.get("rerun_flag", False):
-    st.session_state.rerun_flag = False
-    st.experimental_rerun()
+
+
