@@ -16,3 +16,18 @@ def create_table():
     """)
     conn.commit()
     conn.close()
+
+def get_all_users():
+    conn = create_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, role FROM users")
+    users = cursor.fetchall()
+    conn.close()
+    return users
+
+def delete_user(user_id):
+    conn = create_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
