@@ -93,83 +93,117 @@ plant_class_labels = {
 # Global CSS
 # ----------------------------
 def inject_css():
-  st.markdown("""
-<style>
+    st.markdown("""
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
 
-/* Hide Streamlit default */
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
+    /* General */
+    .stApp {
+        background: #f4f8f5;
+    }
 
-/* Force ALL text to black */
-html, body, p, span, div, label, h1, h2, h3, h4, h5 {
-    color: black !important;
-}
+    html, body, p, span, div, label, h1, h2, h3, h4, h5 {
+        color: #000000 !important;
+    }
 
-/* Background */
-.stApp {
-    background: #f7faf8;
-}
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        max-width: 1200px;
+    }
 
-/* Center and reduce login box size */
-.auth-wrap {
-    max-width: 350px;
-    margin: auto;
-}
+    /* Login/Register wrapper */
+    .auth-wrap {
+        max-width: 460px;
+        margin: 0 auto;
+    }
 
-/* Login card */
-.custom-card {
-    background: white;
-    border-radius: 16px;
-    padding: 25px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-}
+    .custom-card {
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 24px 22px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+        border: 1px solid #e5e7eb;
+    }
 
-/* Smaller text inputs */
-.stTextInput input {
-    height: 38px;
-    font-size: 14px;
-}
+    .section-title {
+        font-size: 30px;
+        font-weight: 700;
+        color: #000000 !important;
+        margin-bottom: 6px;
+        text-align: left;
+    }
 
-/* Smaller password inputs */
-.stTextInput > div > div > input {
-    height: 38px;
-    font-size: 14px;
-}
+    .center-note {
+        text-align: center;
+        color: #4b5563 !important;
+        margin-bottom: 20px;
+        font-size: 16px;
+    }
 
-/* Smaller buttons */
-.stButton > button {
-    height: 40px;
-    font-size: 14px;
-    border-radius: 10px;
-}
+    /* Make input containers shorter */
+    .auth-wrap .stTextInput,
+    .auth-wrap .stButton {
+        max-width: 340px;
+        margin-left: auto;
+        margin-right: auto;
+    }
 
-/* Cleaner cards */
-.result-card {
-    background: #f3f4f6;
-    border-radius: 16px;
-    padding: 20px;
-}
+    .auth-wrap .stTextInput input {
+        height: 42px;
+        font-size: 14px;
+        border-radius: 10px !important;
+    }
 
-/* Warning box */
-.warning-box {
-    background: #f8fafc;
-    border-radius: 12px;
-    padding: 15px;
-}
+    /* Buttons */
+    .stButton > button {
+        height: 42px;
+        font-size: 15px;
+        border-radius: 10px;
+        background: #16a34a;
+        color: white !important;
+        border: none;
+    }
 
-/* RTL Arabic section */
-.rtl-box {
-    direction: rtl;
-    text-align: right;
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 15px;
-}
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 16px;
+        justify-content: center;
+    }
 
-</style>
-""", unsafe_allow_html=True)
-inject_css()
+    .stTabs [data-baseweb="tab"] {
+        color: #6b7280 !important;
+        font-weight: 600;
+        font-size: 16px;
+        padding: 6px 4px 10px 4px;
+    }
+
+    .stTabs [aria-selected="true"] {
+        color: #000000 !important;
+        border-bottom: 2px solid #16a34a !important;
+    }
+
+    /* Hide long full-width feeling */
+    .auth-wrap [data-testid="stTextInputRootElement"] {
+        max-width: 340px;
+        margin: 0 auto;
+    }
+
+    .auth-wrap [data-testid="stButton"] {
+        max-width: 340px;
+        margin: 0 auto;
+    }
+
+    /* Optional: nicer placeholder */
+    input::placeholder {
+        color: #9ca3af !important;
+        opacity: 1;
+    }
+
+    </style>
+    """, unsafe_allow_html=True)
 
 # ----------------------------
 # Helper Functions
@@ -483,4 +517,5 @@ elif st.session_state.role == "admin":
     show_admin_page()
 elif st.session_state.role == "user":
     show_user_page()
+
 
