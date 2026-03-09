@@ -99,109 +99,166 @@ def inject_css():
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    /* General */
+    /* Page */
     .stApp {
-        background: #f4f8f5;
-    }
-
-    html, body, p, span, div, label, h1, h2, h3, h4, h5 {
-        color: #000000 !important;
+        background: linear-gradient(180deg, #f6faf7 0%, #eef5f0 100%);
     }
 
     .block-container {
-        padding-top: 2rem;
+        padding-top: 3rem;
         padding-bottom: 2rem;
         max-width: 1200px;
     }
 
-    /* Login/Register wrapper */
+    /* Force text black */
+    html, body, p, span, div, label, h1, h2, h3, h4, h5, h6 {
+        color: #000000 !important;
+    }
+
+    /* Auth container */
+    .auth-shell {
+        min-height: 75vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
     .auth-wrap {
-        max-width: 460px;
+        width: 100%;
+        max-width: 430px;
         margin: 0 auto;
     }
 
-    .custom-card {
+    .auth-card {
         background: #ffffff;
-        border-radius: 18px;
-        padding: 24px 22px;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.06);
         border: 1px solid #e5e7eb;
+        border-radius: 24px;
+        padding: 30px 28px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.07);
     }
 
-    .section-title {
-        font-size: 30px;
-        font-weight: 700;
-        color: #000000 !important;
-        margin-bottom: 6px;
-        text-align: left;
-    }
-
-    .center-note {
-        text-align: center;
-        color: #4b5563 !important;
-        margin-bottom: 20px;
-        font-size: 16px;
-    }
-
-    /* Make input containers shorter */
-    .auth-wrap .stTextInput,
-    .auth-wrap .stButton {
-        max-width: 340px;
-        margin-left: auto;
-        margin-right: auto;
-    }
-
-    .auth-wrap .stTextInput input {
-        height: 42px;
-        font-size: 14px;
-        border-radius: 10px !important;
-    }
-
-    /* Buttons */
-    .stButton > button {
-        height: 42px;
-        font-size: 15px;
-        border-radius: 10px;
-        background: #16a34a;
+    .auth-logo {
+        width: 62px;
+        height: 62px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #16a34a 0%, #0f766e 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        margin: 0 auto 16px auto;
         color: white !important;
-        border: none;
+        box-shadow: 0 8px 20px rgba(22,163,74,0.20);
+    }
+
+    .auth-title {
+        text-align: center;
+        font-size: 28px;
+        font-weight: 800;
+        margin-bottom: 6px;
+        color: #111827 !important;
+    }
+
+    .auth-subtitle {
+        text-align: center;
+        font-size: 15px;
+        color: #6b7280 !important;
+        margin-bottom: 22px;
     }
 
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 16px;
+        gap: 20px;
         justify-content: center;
+        margin-bottom: 14px;
     }
 
     .stTabs [data-baseweb="tab"] {
         color: #6b7280 !important;
-        font-weight: 600;
-        font-size: 16px;
-        padding: 6px 4px 10px 4px;
+        font-size: 15px;
+        font-weight: 700;
+        padding: 8px 6px 10px 6px;
     }
 
     .stTabs [aria-selected="true"] {
-        color: #000000 !important;
+        color: #111827 !important;
         border-bottom: 2px solid #16a34a !important;
     }
 
-    /* Hide long full-width feeling */
-    .auth-wrap [data-testid="stTextInputRootElement"] {
-        max-width: 340px;
-        margin: 0 auto;
-    }
-
+    /* Make form area compact */
+    .auth-wrap .stTextInput,
+    .auth-wrap .stButton,
+    .auth-wrap [data-testid="stTextInputRootElement"],
     .auth-wrap [data-testid="stButton"] {
-        max-width: 340px;
-        margin: 0 auto;
+        max-width: 320px;
+        margin-left: auto;
+        margin-right: auto;
     }
 
-    /* Optional: nicer placeholder */
-    input::placeholder {
+    /* Labels */
+    .auth-wrap label {
+        color: #111827 !important;
+        font-weight: 600 !important;
+    }
+
+    /* Inputs */
+    .auth-wrap .stTextInput input {
+        height: 44px;
+        font-size: 14px;
+        color: #111827 !important;
+        background: #f9fafb !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 12px !important;
+        padding-left: 12px !important;
+    }
+
+    .auth-wrap .stTextInput input::placeholder {
         color: #9ca3af !important;
         opacity: 1;
     }
 
+    /* Buttons */
+    .auth-wrap .stButton > button {
+        width: 100%;
+        height: 44px;
+        border-radius: 12px;
+        border: none;
+        background: linear-gradient(135deg, #16a34a 0%, #0f766e 100%);
+        color: #ffffff !important;
+        font-size: 15px;
+        font-weight: 700;
+        margin-top: 8px;
+        box-shadow: 0 8px 18px rgba(22,163,74,0.18);
+    }
+
+    .auth-wrap .stButton > button:hover {
+        color: #ffffff !important;
+        border: none;
+    }
+
+    /* Reduce extra empty width feeling */
+    .auth-wrap .stTextInput {
+        margin-bottom: 6px;
+    }
+
+    /* Mobile */
+    @media (max-width: 640px) {
+        .auth-card {
+            padding: 24px 18px;
+            border-radius: 20px;
+        }
+
+        .auth-wrap {
+            max-width: 95%;
+        }
+
+        .auth-wrap .stTextInput,
+        .auth-wrap .stButton,
+        .auth-wrap [data-testid="stTextInputRootElement"],
+        .auth-wrap [data-testid="stButton"] {
+            max-width: 100%;
+        }
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -278,28 +335,31 @@ def logout():
 # UI Pages
 # ----------------------------
 def show_auth_page():
-    st.markdown("""
-        <div class="auth-wrap">
-            <div class="hero">
-                <h1>🌿 Nabta AI</h1>
-                <p>
-                    Smart agricultural assistant for soil moisture and plant disease detection.
-                    Clean, fast, and designed to support better farming decisions.
-                </p>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-
+    st.markdown('<div class="auth-shell">', unsafe_allow_html=True)
     st.markdown('<div class="auth-wrap">', unsafe_allow_html=True)
-    st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">Welcome</div>', unsafe_allow_html=True)
-    st.markdown('<div class="center-note">Login or create a new account to continue</div>', unsafe_allow_html=True)
+    st.markdown('<div class="auth-card">', unsafe_allow_html=True)
+
+    st.markdown('<div class="auth-logo">🌿</div>', unsafe_allow_html=True)
+    st.markdown('<div class="auth-title">Nabta AI</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="auth-subtitle">Login or create a new account to continue</div>',
+        unsafe_allow_html=True
+    )
 
     tab1, tab2 = st.tabs(["Login", "Register"])
 
     with tab1:
-        username = st.text_input("Username", key="login_user", placeholder="Enter your username")
-        password = st.text_input("Password", type="password", key="login_pass", placeholder="Enter your password")
+        username = st.text_input(
+            "Username",
+            key="login_user",
+            placeholder="Enter your username"
+        )
+        password = st.text_input(
+            "Password",
+            type="password",
+            key="login_pass",
+            placeholder="Enter your password"
+        )
 
         if st.button("Login", key="login_btn"):
             role = login_user(username, password)
@@ -312,8 +372,17 @@ def show_auth_page():
                 st.error("Invalid username or password.")
 
     with tab2:
-        username = st.text_input("Create Username", key="reg_user", placeholder="Choose a username")
-        password = st.text_input("Create Password", type="password", key="reg_pass", placeholder="Choose a password")
+        username = st.text_input(
+            "Username",
+            key="reg_user",
+            placeholder="Choose a username"
+        )
+        password = st.text_input(
+            "Password",
+            type="password",
+            key="reg_pass",
+            placeholder="Choose a password"
+        )
 
         if st.button("Create Account", key="reg_btn"):
             if username.strip() and password.strip():
@@ -324,6 +393,7 @@ def show_auth_page():
             else:
                 st.warning("Please fill in all fields.")
 
+    st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -517,5 +587,6 @@ elif st.session_state.role == "admin":
     show_admin_page()
 elif st.session_state.role == "user":
     show_user_page()
+
 
 
