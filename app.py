@@ -95,172 +95,223 @@ plant_class_labels = {
 def inject_css():
     st.markdown("""
     <style>
+    /* Hide default Streamlit elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    /* Page */
+    /* App background */
     .stApp {
-        background: linear-gradient(180deg, #f6faf7 0%, #eef5f0 100%);
+        background: linear-gradient(180deg, #f7faf8 0%, #eef6f0 100%);
+        color: #1f2937;
     }
 
+    /* Main container spacing */
     .block-container {
-        padding-top: 3rem;
+        padding-top: 2rem;
         padding-bottom: 2rem;
-        max-width: 1200px;
+        max-width: 1250px;
     }
 
-    /* Force text black */
-    html, body, p, span, div, label, h1, h2, h3, h4, h5, h6 {
-        color: #000000 !important;
+    /* Typography */
+    html, body, [class*="css"] {
+        font-family: "Inter", "Segoe UI", sans-serif;
     }
 
-    /* Auth container */
-    .auth-shell {
-        min-height: 75vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    .hero {
+        background: linear-gradient(135deg, #0f766e 0%, #22c55e 100%);
+        border-radius: 24px;
+        padding: 34px 30px;
+        color: white;
+        box-shadow: 0 10px 30px rgba(15, 118, 110, 0.18);
+        margin-bottom: 1.2rem;
     }
 
-    .auth-wrap {
-        width: 100%;
-        max-width: 430px;
-        margin: 0 auto;
+    .hero h1 {
+        margin: 0;
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
     }
 
-    .auth-card {
+    .hero p {
+        margin-top: 10px;
+        margin-bottom: 0;
+        font-size: 1rem;
+        opacity: 0.95;
+        line-height: 1.7;
+    }
+
+    .section-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 0.75rem;
+    }
+
+    .custom-card {
+        background: rgba(255,255,255,0.9);
+        border: 1px solid rgba(15, 23, 42, 0.06);
+        border-radius: 22px;
+        padding: 22px;
+        box-shadow: 0 8px 30px rgba(2, 6, 23, 0.05);
+        backdrop-filter: blur(8px);
+        margin-bottom: 1rem;
+    }
+
+    .subtle-card {
         background: #ffffff;
         border: 1px solid #e5e7eb;
-        border-radius: 24px;
-        padding: 30px 28px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.07);
-    }
-
-    .auth-logo {
-        width: 62px;
-        height: 62px;
         border-radius: 18px;
-        background: linear-gradient(135deg, #16a34a 0%, #0f766e 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 28px;
-        margin: 0 auto 16px auto;
-        color: white !important;
-        box-shadow: 0 8px 20px rgba(22,163,74,0.20);
+        padding: 18px;
+        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+        margin-bottom: 1rem;
     }
 
-    .auth-title {
-        text-align: center;
-        font-size: 28px;
+    .result-card {
+        background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+        color: white;
+        border-radius: 22px;
+        padding: 24px;
+        box-shadow: 0 12px 30px rgba(17, 24, 39, 0.18);
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .result-title {
+        font-size: 0.95rem;
+        opacity: 0.8;
+        margin-bottom: 8px;
+    }
+
+    .result-label {
+        font-size: 1.45rem;
         font-weight: 800;
-        margin-bottom: 6px;
-        color: #111827 !important;
+        margin-bottom: 10px;
     }
 
-    .auth-subtitle {
+    .confidence-badge {
+        display: inline-block;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.15);
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 0.92rem;
+    }
+
+    .info-chip {
+        display: inline-block;
+        background: #ecfdf5;
+        color: #047857;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-right: 8px;
+        margin-bottom: 8px;
+    }
+
+    .warning-box {
+        border: 1px dashed #cbd5e1;
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 18px;
         text-align: center;
-        font-size: 15px;
-        color: #6b7280 !important;
-        margin-bottom: 22px;
+        color: #64748b;
+        font-size: 0.95rem;
     }
 
-    /* Tabs */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 20px;
-        justify-content: center;
-        margin-bottom: 14px;
+    .guide-box {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+        margin-bottom: 1rem;
     }
 
-    .stTabs [data-baseweb="tab"] {
-        color: #6b7280 !important;
-        font-size: 15px;
+    .guide-title {
+        font-size: 1rem;
         font-weight: 700;
-        padding: 8px 6px 10px 6px;
+        margin-bottom: 10px;
+        color: #0f172a;
     }
 
-    .stTabs [aria-selected="true"] {
-        color: #111827 !important;
-        border-bottom: 2px solid #16a34a !important;
+    .rtl-box {
+        direction: rtl;
+        text-align: right;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+        margin-bottom: 1rem;
     }
 
-    /* Make form area compact */
-    .auth-wrap .stTextInput,
-    .auth-wrap .stButton,
-    .auth-wrap [data-testid="stTextInputRootElement"],
-    .auth-wrap [data-testid="stButton"] {
-        max-width: 320px;
-        margin-left: auto;
-        margin-right: auto;
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
     }
 
-    /* Labels */
-    .auth-wrap label {
-        color: #111827 !important;
-        font-weight: 600 !important;
-    }
-
-    /* Inputs */
-    .auth-wrap .stTextInput input {
-        height: 44px;
-        font-size: 14px;
-        color: #111827 !important;
-        background: #f9fafb !important;
-        border: 1px solid #d1d5db !important;
-        border-radius: 12px !important;
-        padding-left: 12px !important;
-    }
-
-    .auth-wrap .stTextInput input::placeholder {
-        color: #9ca3af !important;
-        opacity: 1;
+    section[data-testid="stSidebar"] * {
+        color: white !important;
     }
 
     /* Buttons */
-    .auth-wrap .stButton > button {
+    .stButton > button {
         width: 100%;
-        height: 44px;
-        border-radius: 12px;
+        border-radius: 14px;
         border: none;
-        background: linear-gradient(135deg, #16a34a 0%, #0f766e 100%);
-        color: #ffffff !important;
-        font-size: 15px;
+        padding: 0.78rem 1rem;
         font-weight: 700;
-        margin-top: 8px;
-        box-shadow: 0 8px 18px rgba(22,163,74,0.18);
+        font-size: 0.96rem;
+        background: linear-gradient(135deg, #16a34a 0%, #0f766e 100%);
+        color: white;
+        box-shadow: 0 8px 18px rgba(34, 197, 94, 0.22);
+        transition: 0.2s ease;
     }
 
-    .auth-wrap .stButton > button:hover {
-        color: #ffffff !important;
-        border: none;
+    .stButton > button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 22px rgba(34, 197, 94, 0.28);
     }
 
-    /* Reduce extra empty width feeling */
-    .auth-wrap .stTextInput {
-        margin-bottom: 6px;
+    /* Inputs */
+    div[data-baseweb="input"] > div,
+    div[data-baseweb="select"] > div,
+    .stTextInput > div > div,
+    .stTextArea textarea,
+    .stSelectbox > div > div,
+    .stNumberInput > div > div {
+        border-radius: 14px !important;
     }
 
-    /* Mobile */
-    @media (max-width: 640px) {
-        .auth-card {
-            padding: 24px 18px;
-            border-radius: 20px;
-        }
+    /* Radio / uploader spacing */
+    .stRadio > div {
+        gap: 0.75rem;
+    }
 
-        .auth-wrap {
-            max-width: 95%;
-        }
+    /* Small helper */
+    .muted {
+        color: #64748b;
+        font-size: 0.95rem;
+    }
 
-        .auth-wrap .stTextInput,
-        .auth-wrap .stButton,
-        .auth-wrap [data-testid="stTextInputRootElement"],
-        .auth-wrap [data-testid="stButton"] {
-            max-width: 100%;
-        }
+    .auth-wrap {
+        max-width: 520px;
+        margin: 0 auto;
+    }
+
+    .center-note {
+        text-align: center;
+        color: #64748b;
+        margin-top: 0.4rem;
+        margin-bottom: 1.5rem;
     }
     </style>
     """, unsafe_allow_html=True)
+
+inject_css()
 
 # ----------------------------
 # Helper Functions
@@ -335,31 +386,28 @@ def logout():
 # UI Pages
 # ----------------------------
 def show_auth_page():
-    st.markdown('<div class="auth-shell">', unsafe_allow_html=True)
-    st.markdown('<div class="auth-wrap">', unsafe_allow_html=True)
-    st.markdown('<div class="auth-card">', unsafe_allow_html=True)
+    st.markdown("""
+        <div class="auth-wrap">
+            <div class="hero">
+                <h1>🌿 Nabta AI</h1>
+                <p>
+                    Smart agricultural assistant for soil moisture and plant disease detection.
+                    Clean, fast, and designed to support better farming decisions.
+                </p>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown('<div class="auth-logo">🌿</div>', unsafe_allow_html=True)
-    st.markdown('<div class="auth-title">Nabta AI</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="auth-subtitle">Login or create a new account to continue</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown('<div class="auth-wrap">', unsafe_allow_html=True)
+    st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Welcome</div>', unsafe_allow_html=True)
+    st.markdown('<div class="center-note">Login or create a new account to continue</div>', unsafe_allow_html=True)
 
     tab1, tab2 = st.tabs(["Login", "Register"])
 
     with tab1:
-        username = st.text_input(
-            "Username",
-            key="login_user",
-            placeholder="Enter your username"
-        )
-        password = st.text_input(
-            "Password",
-            type="password",
-            key="login_pass",
-            placeholder="Enter your password"
-        )
+        username = st.text_input("Username", key="login_user", placeholder="Enter your username")
+        password = st.text_input("Password", type="password", key="login_pass", placeholder="Enter your password")
 
         if st.button("Login", key="login_btn"):
             role = login_user(username, password)
@@ -372,17 +420,8 @@ def show_auth_page():
                 st.error("Invalid username or password.")
 
     with tab2:
-        username = st.text_input(
-            "Username",
-            key="reg_user",
-            placeholder="Choose a username"
-        )
-        password = st.text_input(
-            "Password",
-            type="password",
-            key="reg_pass",
-            placeholder="Choose a password"
-        )
+        username = st.text_input("Create Username", key="reg_user", placeholder="Choose a username")
+        password = st.text_input("Create Password", type="password", key="reg_pass", placeholder="Choose a password")
 
         if st.button("Create Account", key="reg_btn"):
             if username.strip() and password.strip():
@@ -393,7 +432,6 @@ def show_auth_page():
             else:
                 st.warning("Please fill in all fields.")
 
-    st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -587,6 +625,3 @@ elif st.session_state.role == "admin":
     show_admin_page()
 elif st.session_state.role == "user":
     show_user_page()
-
-
-
