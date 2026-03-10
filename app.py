@@ -508,18 +508,6 @@ def show_user_page():
         </div>
     """, unsafe_allow_html=True)
 
-    chip_col1, chip_col2, chip_col3 = st.columns([1, 1, 2])
-    with chip_col1:
-        st.markdown('<span class="info-chip">Modern Dashboard</span>', unsafe_allow_html=True)
-    with chip_col2:
-        st.markdown('<span class="info-chip">Fast Analysis</span>', unsafe_allow_html=True)
-    with chip_col3:
-        st.markdown('<span class="info-chip">English + Arabic Guidance</span>', unsafe_allow_html=True)
-
-    left_col, right_col = st.columns([1, 1], gap="large")
-
-    img = None
-
     with left_col:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
         st.markdown('<div class="section-title"> Input Image</div>', unsafe_allow_html=True)
@@ -624,6 +612,7 @@ elif st.session_state.role == "admin":
     show_admin_page()
 elif st.session_state.role == "user":
     show_user_page()
+
 
 
 
