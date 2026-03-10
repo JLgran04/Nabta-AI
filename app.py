@@ -507,7 +507,7 @@ def show_admin_page():
     st.markdown('</div>', unsafe_allow_html=True)
 
 def show_user_page():
-      with st.sidebar:
+    with st.sidebar:
         st.markdown("### 🌿 Nabta AI")
         st.markdown(f"**Welcome, {st.session_state.username}**")
         st.markdown("---")
@@ -518,6 +518,7 @@ def show_user_page():
         st.markdown("---")
         if st.button("Logout", key="user_logout"):
             logout()
+
     st.markdown("""
         <div class="hero">
             <h1>Nabta AI Application</h1>
@@ -528,7 +529,7 @@ def show_user_page():
         </div>
     """, unsafe_allow_html=True)
 
-  img = None
+    img = None
     left_col, right_col = st.columns(2)
 
     with left_col:
@@ -542,6 +543,40 @@ def show_user_page():
             key="input_method",
             horizontal=True
         )
+
+        if input_method == "Upload":
+            uploaded = st.file_uploader(
+                "Upload soil or plant image",
+                type=["jpg", "jpeg", "png"],
+                key="upload_img"
+            )
+            if uploaded:
+                img = Image.open(uploaded).convert("RGB")
+        else:
+            cam_img = st.camera_input("Take live photo", key="cam_img")
+            if cam_img:
+                img = Image.open(cam_img).convert("RGB")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with right_col:
+        st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Preview & Task</div>', unsafe_allow_html=True)
+        st.markdown('<div class="muted">Preview the image and choose the analysis type.</div>', unsafe_allow_html=True)
+
+        if img:
+            st.image(img, caption="Image Preview", use_container_width=True)
+        else:
+            st.markdown('<div class="warning-box">No image selected yet.</div>', unsafe_allow_html=True)
+
+        task_type = st.radio(
+            "What would you like to analyze?",
+            ["Soil Moisture", "Plant Disease"],
+            horizontal=True,
+            key="task_type"
+        )
+
+        st.markdown('</div>', unsafe_allow_html=True)
 
         if input_method == "Upload":
             uploaded = st.file_uploader(
