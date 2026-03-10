@@ -273,7 +273,7 @@ def inject_css():
         font-weight: 700;
         font-size: 0.96rem;
         background: linear-gradient(135deg, #16a34a 0%, #0f766e 100%);
-        color: black;
+        color: white;
         box-shadow: 0 8px 18px rgba(34, 197, 94, 0.22);
         transition: 0.2s ease;
     }
@@ -294,9 +294,20 @@ def inject_css():
     }
 
     /* Radio / uploader spacing */
-    .stRadio > div {
-        gap: 0.75rem;
-    }
+.stRadio > div {
+    gap: 0.75rem;
+}
+
+/* Make radio labels visible */
+.stRadio label,
+.stRadio span,
+.stRadio p,
+div[data-baseweb="radio"] label,
+div[data-baseweb="radio"] span {
+    color: #111827 !important;
+    opacity: 1 !important;
+    font-weight: 500;
+}
 
     /* Small helper */
     .muted {
@@ -626,4 +637,5 @@ elif st.session_state.role == "user":
     show_user_page()
 else:
     st.error("Unknown role detected.")
+
 
