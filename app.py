@@ -407,7 +407,7 @@ def show_auth_page():
     st.markdown("""
         <div class="auth-wrap">
             <div class="hero">
-                <h1>                             🌿 Nabta AI</h1>
+                <h1 style="text-align: center;">🌿 Nabta AI</h1>
                 <p>
                     Smart agricultural assistant for soil moisture and plant disease detection.
                 </p>
@@ -638,6 +638,7 @@ elif st.session_state.role == "user":
     show_user_page()
 else:
     st.error("Unknown role detected.")
+
 
 
 
