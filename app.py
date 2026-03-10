@@ -17,7 +17,14 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
 create_table()
+
+# Create default admin account
+try:
+    create_user("admin", "admin123", role="admin")
+except:
+    pass
 
 # ----------------------------
 # Session State
@@ -266,7 +273,7 @@ def inject_css():
         font-weight: 700;
         font-size: 0.96rem;
         background: linear-gradient(135deg, #16a34a 0%, #0f766e 100%);
-        color: black;
+        color: white;
         box-shadow: 0 8px 18px rgba(34, 197, 94, 0.22);
         transition: 0.2s ease;
     }
@@ -312,6 +319,7 @@ def inject_css():
     """, unsafe_allow_html=True)
 
 inject_css()
+
 # ----------------------------
 # Helper Functions
 # ----------------------------
@@ -341,7 +349,7 @@ def predict_plant(img: Image.Image):
 
 def explain_prediction(label: str, category: str) -> str:
     if not gemini_model:
-        return " Gemini is not configured. Add GEMINI_API_KEY."
+        return "Gemini is not configured. Add GEMINI_API_KEY."
 
     prompt = (
         f"You are an experienced agricultural advisor. "
@@ -434,9 +442,11 @@ def show_auth_page():
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
+    st.info("Default admin login → Username: admin | Password: admin123")
+
 def show_admin_page():
     with st.sidebar:
-        st.markdown(f"###  Admin Panel")
+        st.markdown("### Admin Panel")
         st.markdown(f"**User:** {st.session_state.username}")
         st.markdown("---")
         if st.button("Logout", key="admin_logout"):
@@ -486,6 +496,9 @@ def show_admin_page():
     st.markdown('</div>', unsafe_allow_html=True)
 
 def show_user_page():
+    img = None
+    left_col, right_col = st.columns(2)
+
     with st.sidebar:
         st.markdown("### 🌿 Nabta AI")
         st.markdown(f"**Welcome, {st.session_state.username}**")
@@ -510,15 +523,14 @@ def show_user_page():
 
     with left_col:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        st.markdown('<div class="section-title"> Input Image</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Input Image</div>', unsafe_allow_html=True)
         st.markdown('<div class="muted">Choose how you want to provide the image.</div>', unsafe_allow_html=True)
 
         input_method = st.radio(
             "Provide image:",
             ["Upload", "Camera"],
             key="input_method",
-            horizontal=True,
-            label_visibility="visible"
+            horizontal=True
         )
 
         if input_method == "Upload":
@@ -538,7 +550,7 @@ def show_user_page():
 
     with right_col:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        st.markdown('<div class="section-title"> Preview & Task</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Preview & Task</div>', unsafe_allow_html=True)
         st.markdown('<div class="muted">Preview the image and choose the analysis type.</div>', unsafe_allow_html=True)
 
         if img:
@@ -559,7 +571,7 @@ def show_user_page():
         analyze_clicked = st.button("Analyze Image", key="analyze_btn")
 
     if analyze_clicked:
-        if not img:
+        if img is None:
             st.warning("Please upload or capture an image first.")
             return
 
@@ -612,7 +624,5 @@ elif st.session_state.role == "admin":
     show_admin_page()
 elif st.session_state.role == "user":
     show_user_page()
-
-
-
-
+else:
+    st.error("Unknown role detected.")
