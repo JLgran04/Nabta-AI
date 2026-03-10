@@ -95,15 +95,51 @@ plant_class_labels = {
 def inject_css():
     st.markdown("""
     <style>
+
     /* Hide default Streamlit elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
+    /* Force all text to black */
+    body, p, span, label, div, input, textarea, select {
+        color: black !important;
+    }
+
     /* App background */
     .stApp {
         background: linear-gradient(180deg, #f7faf8 0%, #eef6f0 100%);
-        color: #1f2937;
+        color: black;
+    }
+
+    /* Center login/register box */
+    .auth-wrap {
+        max-width: 380px;      /* smaller box */
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 80px;      /* vertical center feel */
+        padding: 20px;
+        background: white;
+        border-radius: 18px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    }
+
+    /* Shorter input boxes */
+    .stTextInput input {
+        width: 100% !important;
+        max-width: 340px;
+        margin: auto;
+        display: block;
+        border-radius: 12px;
+    }
+
+    /* Center buttons */
+    .stButton button {
+        width: 100%;
+        max-width: 340px;
+        margin: auto;
+        display: block;
+        border-radius: 12px;
     }
 
     /* Main container spacing */
@@ -113,201 +149,13 @@ def inject_css():
         max-width: 1250px;
     }
 
-    /* Typography */
-    html, body, [class*="css"] {
-        font-family: "Inter", "Segoe UI", sans-serif;
-    }
-
-    .hero {
-        background: linear-gradient(135deg, #0f766e 0%, #22c55e 100%);
-        border-radius: 24px;
-        padding: 34px 30px;
-        color: white;
-        box-shadow: 0 10px 30px rgba(15, 118, 110, 0.18);
-        margin-bottom: 1.2rem;
-    }
-
-    .hero h1 {
-        margin: 0;
-        font-size: 2.2rem;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-    }
-
-    .hero p {
-        margin-top: 10px;
-        margin-bottom: 0;
-        font-size: 1rem;
-        opacity: 0.95;
-        line-height: 1.7;
-    }
-
-    .section-title {
-        font-size: 1.15rem;
-        font-weight: 700;
-        color: #0f172a;
-        margin-bottom: 0.75rem;
-    }
-
-    .custom-card {
-        background: rgba(255,255,255,0.9);
-        border: 1px solid rgba(15, 23, 42, 0.06);
-        border-radius: 22px;
-        padding: 22px;
-        box-shadow: 0 8px 30px rgba(2, 6, 23, 0.05);
-        backdrop-filter: blur(8px);
-        margin-bottom: 1rem;
-    }
-
-    .subtle-card {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 18px;
-        padding: 18px;
-        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
-        margin-bottom: 1rem;
-    }
-
-    .result-card {
-        background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
-        color: white;
-        border-radius: 22px;
-        padding: 24px;
-        box-shadow: 0 12px 30px rgba(17, 24, 39, 0.18);
-        margin-top: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    .result-title {
-        font-size: 0.95rem;
-        opacity: 0.8;
-        margin-bottom: 8px;
-    }
-
-    .result-label {
-        font-size: 1.45rem;
-        font-weight: 800;
-        margin-bottom: 10px;
-    }
-
-    .confidence-badge {
-        display: inline-block;
-        background: rgba(255,255,255,0.12);
-        border: 1px solid rgba(255,255,255,0.15);
-        padding: 8px 14px;
-        border-radius: 999px;
-        font-size: 0.92rem;
-    }
-
-    .info-chip {
-        display: inline-block;
-        background: #ecfdf5;
-        color: #047857;
-        padding: 6px 12px;
-        border-radius: 999px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin-right: 8px;
-        margin-bottom: 8px;
-    }
-
-    .warning-box {
-        border: 1px dashed #cbd5e1;
-        background: #f8fafc;
-        border-radius: 16px;
-        padding: 18px;
-        text-align: center;
-        color: #64748b;
-        font-size: 0.95rem;
-    }
-
-    .guide-box {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 18px;
-        padding: 20px;
-        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
-        margin-bottom: 1rem;
-    }
-
-    .guide-title {
-        font-size: 1rem;
-        font-weight: 700;
-        margin-bottom: 10px;
-        color: #0f172a;
-    }
-
-    .rtl-box {
-        direction: rtl;
-        text-align: right;
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 18px;
-        padding: 20px;
-        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
-        margin-bottom: 1rem;
-    }
-
-    /* Sidebar */
-    section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-    }
-
-    section[data-testid="stSidebar"] * {
-        color: white !important;
-    }
-
-    /* Buttons */
-    .stButton > button {
-        width: 100%;
-        border-radius: 14px;
-        border: none;
-        padding: 0.78rem 1rem;
-        font-weight: 700;
-        font-size: 0.96rem;
-        background: linear-gradient(135deg, #16a34a 0%, #0f766e 100%);
-        color: white;
-        box-shadow: 0 8px 18px rgba(34, 197, 94, 0.22);
-        transition: 0.2s ease;
-    }
-
-    .stButton > button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 12px 22px rgba(34, 197, 94, 0.28);
-    }
-
-    /* Inputs */
+    /* Inputs rounded */
     div[data-baseweb="input"] > div,
-    div[data-baseweb="select"] > div,
-    .stTextInput > div > div,
     .stTextArea textarea,
-    .stSelectbox > div > div,
-    .stNumberInput > div > div {
-        border-radius: 14px !important;
+    .stSelectbox > div > div {
+        border-radius: 12px !important;
     }
 
-    /* Radio / uploader spacing */
-    .stRadio > div {
-        gap: 0.75rem;
-    }
-
-    /* Small helper */
-    .muted {
-        color: #64748b;
-        font-size: 0.95rem;
-    }
-
-    .auth-wrap {
-        max-width: 520px;
-        margin: 0 auto;
-    }
-
-    .center-note {
-        text-align: center;
-        color: #64748b;
-        margin-top: 0.4rem;
-        margin-bottom: 1.5rem;
-    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -625,4 +473,5 @@ elif st.session_state.role == "admin":
     show_admin_page()
 elif st.session_state.role == "user":
     show_user_page()
+
 
