@@ -408,9 +408,7 @@ def show_auth_page():
         <div class="auth-wrap">
             <div class="hero">
                 <h1 style="text-align: center;">🌿 Nabta AI</h1>
-                <p> style="text-align: center;">
-                    Working Towards A Greener Kuwait.
-                </p>
+                <p style="text-align: center;"> Working Towards A Greener Kuwait. </p>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -638,6 +636,7 @@ elif st.session_state.role == "user":
     show_user_page()
 else:
     st.error("Unknown role detected.")
+
 
 
 
