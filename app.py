@@ -509,6 +509,15 @@ def show_admin_page():
 def show_user_page():
     img = None
     left_col, right_col = st.columns(2)
+    st.markdown("""
+        <div class="hero">
+            <h1>Nabta AI Application</h1>
+            <p>
+                Upload or capture an image, choose the analysis type,
+                and receive an AI-powered result with practical guidance.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
 
     with st.sidebar:
         st.markdown("### 🌿 Nabta AI")
@@ -522,15 +531,6 @@ def show_user_page():
         if st.button("Logout", key="user_logout"):
             logout()
 
-    st.markdown("""
-        <div class="hero">
-            <h1>Nabta AI Application</h1>
-            <p>
-                Upload or capture an image, choose the analysis type,
-                and receive an AI-powered result with practical guidance.
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
 
     with left_col:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
@@ -637,5 +637,6 @@ elif st.session_state.role == "user":
     show_user_page()
 else:
     st.error("Unknown role detected.")
+
 
 
