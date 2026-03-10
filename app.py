@@ -342,7 +342,7 @@ def predict_plant(img: Image.Image):
 
 def explain_prediction(label: str, category: str) -> str:
     if not gemini_model:
-        return "🌐 Gemini is not configured. Add GEMINI_API_KEY."
+        return " Gemini is not configured. Add GEMINI_API_KEY."
 
     prompt = (
         f"You are an experienced agricultural advisor. "
@@ -437,7 +437,7 @@ def show_auth_page():
 
 def show_admin_page():
     with st.sidebar:
-        st.markdown(f"### 👑 Admin Panel")
+        st.markdown(f"###  Admin Panel")
         st.markdown(f"**User:** {st.session_state.username}")
         st.markdown("---")
         if st.button("Logout", key="admin_logout"):
@@ -523,7 +523,7 @@ def show_user_page():
 
     with left_col:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">📥 Input Image</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title"> Input Image</div>', unsafe_allow_html=True)
         st.markdown('<div class="muted">Choose how you want to provide the image.</div>', unsafe_allow_html=True)
 
         input_method = st.radio(
@@ -551,7 +551,7 @@ def show_user_page():
 
     with right_col:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">🔎 Preview & Task</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title"> Preview & Task</div>', unsafe_allow_html=True)
         st.markdown('<div class="muted">Preview the image and choose the analysis type.</div>', unsafe_allow_html=True)
 
         if img:
@@ -625,3 +625,4 @@ elif st.session_state.role == "admin":
     show_admin_page()
 elif st.session_state.role == "user":
     show_user_page()
+
