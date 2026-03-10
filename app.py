@@ -273,7 +273,7 @@ def inject_css():
         font-weight: 700;
         font-size: 0.96rem;
         background: linear-gradient(135deg, #16a34a 0%, #0f766e 100%);
-        color: white;
+        color: black;
         box-shadow: 0 8px 18px rgba(34, 197, 94, 0.22);
         transition: 0.2s ease;
     }
@@ -626,3 +626,4 @@ elif st.session_state.role == "user":
     show_user_page()
 else:
     st.error("Unknown role detected.")
+
