@@ -540,7 +540,7 @@ def show_user_page():
         input_method = st.radio(
             "Provide image:",
             ["Upload", "Camera"],
-            key="input_method",
+            key="user_input_method",
             horizontal=True
         )
 
@@ -548,13 +548,16 @@ def show_user_page():
             uploaded = st.file_uploader(
                 "Upload soil or plant image",
                 type=["jpg", "jpeg", "png"],
-                key="upload_img"
+                key="user_upload_img"
             )
-            if uploaded:
+            if uploaded is not None:
                 img = Image.open(uploaded).convert("RGB")
         else:
-            cam_img = st.camera_input("Take live photo", key="cam_img")
-            if cam_img:
+            cam_img = st.camera_input(
+                "Take live photo",
+                key="user_cam_img"
+            )
+            if cam_img is not None:
                 img = Image.open(cam_img).convert("RGB")
 
         st.markdown('</div>', unsafe_allow_html=True)
@@ -564,7 +567,7 @@ def show_user_page():
         st.markdown('<div class="section-title">Preview & Task</div>', unsafe_allow_html=True)
         st.markdown('<div class="muted">Preview the image and choose the analysis type.</div>', unsafe_allow_html=True)
 
-        if img:
+        if img is not None:
             st.image(img, caption="Image Preview", use_container_width=True)
         else:
             st.markdown('<div class="warning-box">No image selected yet.</div>', unsafe_allow_html=True)
@@ -573,47 +576,14 @@ def show_user_page():
             "What would you like to analyze?",
             ["Soil Moisture", "Plant Disease"],
             horizontal=True,
-            key="task_type"
+            key="user_task_type"
         )
 
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        if input_method == "Upload":
-            uploaded = st.file_uploader(
-                "Upload soil or plant image",
-                type=["jpg", "jpeg", "png"],
-                key="upload_img"
-            )
-            if uploaded:
-                img = Image.open(uploaded).convert("RGB")
-        else:
-            cam_img = st.camera_input("Take live photo", key="cam_img")
-            if cam_img:
-                img = Image.open(cam_img).convert("RGB")
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with right_col:
-        st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">Preview & Task</div>', unsafe_allow_html=True)
-        st.markdown('<div class="muted">Preview the image and choose the analysis type.</div>', unsafe_allow_html=True)
-
-        if img:
-            st.image(img, caption="Image Preview", use_container_width=True)
-        else:
-            st.markdown('<div class="warning-box">No image selected yet.</div>', unsafe_allow_html=True)
-
-        task_type = st.radio(
-            "What would you like to analyze?",
-            ["Soil Moisture", "Plant Disease"],
-            horizontal=True,
-            key="task_type"
-        )
         st.markdown('</div>', unsafe_allow_html=True)
 
     analyze_col1, analyze_col2, analyze_col3 = st.columns([1, 1.2, 1])
     with analyze_col2:
-        analyze_clicked = st.button("Analyze Image", key="analyze_btn")
+        analyze_clicked = st.button("Analyze Image", key="user_analyze_btn")
 
     if analyze_clicked:
         if img is None:
@@ -671,6 +641,7 @@ elif st.session_state.role == "user":
     show_user_page()
 else:
     st.error("Unknown role detected.")
+
 
 
 
