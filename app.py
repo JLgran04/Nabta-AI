@@ -97,7 +97,7 @@ plant_class_labels = {
 }
 
 # ----------------------------
-# Global CSS
+# CSS
 # ----------------------------
 def inject_css():
     st.markdown("""
@@ -332,7 +332,7 @@ div[data-baseweb="radio"] span {
 inject_css()
 
 # ----------------------------
-# Helper Functions
+# System Functions
 # ----------------------------
 def preprocess_image(img: Image.Image, target_size=(150, 150)):
     img = img.resize(target_size)
@@ -407,10 +407,9 @@ def show_auth_page():
     st.markdown("""
         <div class="auth-wrap">
             <div class="hero">
-                <h1>🌿 Nabta AI</h1>
+                <h1>                             🌿 Nabta AI</h1>
                 <p>
                     Smart agricultural assistant for soil moisture and plant disease detection.
-                    Clean, fast, and designed to support better farming decisions.
                 </p>
             </div>
         </div>
@@ -453,7 +452,6 @@ def show_auth_page():
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    st.info("Default admin login → Username: admin | Password: admin123")
 
 def show_admin_page():
     with st.sidebar:
@@ -466,7 +464,7 @@ def show_admin_page():
     st.markdown("""
         <div class="hero">
             <h1>Admin Dashboard</h1>
-            <p>Manage user accounts and keep the platform organized and secure.</p>
+            <p>Manage user accounts.</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -524,7 +522,6 @@ def show_user_page():
             <h1>Nabta AI Application</h1>
             <p>
                 Upload or capture an image, choose the analysis type,
-                and receive an AI-powered result with practical guidance.
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -587,7 +584,7 @@ def show_user_page():
 
     if analyze_clicked:
         if img is None:
-            st.warning("Please upload or capture an image first.")
+            st.warning("Please upload or Take an image first.")
             return
 
         with st.spinner("Analyzing image..."):
@@ -641,6 +638,7 @@ elif st.session_state.role == "user":
     show_user_page()
 else:
     st.error("Unknown role detected.")
+
 
 
 
