@@ -661,7 +661,7 @@ def show_admin_page():
     st.markdown('</div>', unsafe_allow_html=True)
 
 def show_user_page():
-        with st.sidebar:
+    with st.sidebar:
         st.markdown("### 🌿 Nabta AI")
         st.markdown(f"**Welcome, {st.session_state.username}**")
         st.markdown("---")
@@ -672,9 +672,9 @@ def show_user_page():
         st.markdown("- Scan History with Images")
         st.markdown("- Filtered PDF Export")
         st.markdown("---")
-    
-    font_exists = os.path.exists("fonts/Amiri-Regular.ttf")
-       
+
+        font_exists = os.path.exists("fonts/Amiri-Regular.ttf")
+
         if st.button("Logout", key="user_logout"):
             logout()
 
@@ -889,3 +889,4 @@ elif st.session_state.role == "user":
     show_user_page()
 else:
     st.error("Unknown role detected.")
+    
