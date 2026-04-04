@@ -1,7 +1,6 @@
 import os
 import io
 import textwrap
-import tempfile
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -380,6 +379,129 @@ def split_explanation(explanation: str):
         english_part = explanation.strip()
     return english_part, arabic_part
 
+def image_to_bytes(img: Image.Image):
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+def bytes_to_image(image_bytes):
+    if not image_bytes:
+        return None
+    return Image.open(io.BytesIO(image_bytes))
+
+def wrap_text(text, width=85):
+    if not text:
+        return []
+    lines = []
+    for paragraph in str(text).split("\n"):
+        wrapped = textwrap.wrap(paragraph, width=width)
+        if wrapped:
+            lines.extend(wrapped)
+        else:
+            lines.append("")
+    return lines
+
+def generate_history_pdf(username, history_rows):
+    buffer = io.BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+    page_width, page_height = A4
+    margin = 40
+    y = page_height - margin
+
+    pdf.setTitle(f"{username}_history")
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.drawString(margin, y, f"Nabta AI - Scan History for {username}")
+    y -= 25
+
+    pdf.setFont("Helvetica", 10)
+    pdf.drawString(margin, y, f"Total scans: {len(history_rows)}")
+    y -= 25
+
+    for row in history_rows:
+        scan_id, scan_type, prediction, confidence, explanation_en, explanation_ar, image_data, created_at = row
+
+        if y < 180:
+            pdf.showPage()
+            y = page_height - margin
+
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(margin, y, f"Scan #{scan_id}")
+        y -= 18
+
+        pdf.setFont("Helvetica", 10)
+        pdf.drawString(margin, y, f"Type: {scan_type}")
+        y -= 14
+        pdf.drawString(margin, y, f"Prediction: {prediction}")
+        y -= 14
+        pdf.drawString(margin, y, f"Confidence: {confidence:.2%}")
+        y -= 14
+        pdf.drawString(margin, y, f"Date: {created_at}")
+        y -= 18
+
+        if image_data:
+            try:
+                pil_img = bytes_to_image(image_data)
+                img_buffer = io.BytesIO()
+                pil_img.save(img_buffer, format="PNG")
+                img_buffer.seek(0)
+
+                img_reader = ImageReader(img_buffer)
+                max_w = 180
+                max_h = 140
+                img_w, img_h = pil_img.size
+                scale = min(max_w / img_w, max_h / img_h)
+                draw_w = img_w * scale
+                draw_h = img_h * scale
+
+                pdf.drawImage(
+                    img_reader,
+                    margin,
+                    y - draw_h,
+                    width=draw_w,
+                    height=draw_h,
+                    preserveAspectRatio=True,
+                    mask='auto'
+                )
+                y -= draw_h + 12
+            except Exception:
+                pass
+
+        pdf.setFont("Helvetica-Bold", 10)
+        pdf.drawString(margin, y, "English Explanation:")
+        y -= 14
+
+        pdf.setFont("Helvetica", 9)
+        for line in wrap_text(explanation_en, width=90):
+            if y < 60:
+                pdf.showPage()
+                y = page_height - margin
+                pdf.setFont("Helvetica", 9)
+            pdf.drawString(margin, y, line)
+            y -= 11
+
+        if explanation_ar:
+            y -= 6
+            pdf.setFont("Helvetica-Bold", 10)
+            pdf.drawString(margin, y, "Arabic Explanation:")
+            y -= 14
+
+            pdf.setFont("Helvetica", 9)
+            for line in wrap_text(explanation_ar, width=90):
+                if y < 60:
+                    pdf.showPage()
+                    y = page_height - margin
+                    pdf.setFont("Helvetica", 9)
+                pdf.drawString(margin, y, line)
+                y -= 11
+
+        y -= 20
+        pdf.line(margin, y, page_width - margin, y)
+        y -= 20
+
+    pdf.save()
+    buffer.seek(0)
+    return buffer
+
 def logout():
     st.session_state.logged_in = False
     st.session_state.role = None
@@ -496,7 +618,8 @@ def show_user_page():
         st.markdown("- Soil Moisture Detection")
         st.markdown("- Plant Disease Detection")
         st.markdown("- AI Guidance in English & Arabic")
-        st.markdown("- Scan History Log")
+        st.markdown("- Scan History with Images")
+        st.markdown("- PDF Export")
         st.markdown("---")
         if st.button("Logout", key="user_logout"):
             logout()
@@ -580,15 +703,16 @@ def show_user_page():
                 explanation = explain_prediction(label, "plant disease")
 
         english_part, arabic_part = split_explanation(explanation)
+        image_bytes = image_to_bytes(img)
 
-        # Save scan to history
         save_scan(
             username=st.session_state.username,
             scan_type=task_type,
             prediction=label,
             confidence=prob,
             explanation_en=english_part,
-            explanation_ar=arabic_part
+            explanation_ar=arabic_part,
+            image_data=image_bytes
         )
 
         st.markdown(f"""
@@ -627,16 +751,68 @@ def show_user_page():
     st.markdown('<div class="custom-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">Previous Scans / History Log</div>', unsafe_allow_html=True)
 
-    history = get_user_history(st.session_state.username)
+    history_filter = st.selectbox(
+        "Filter history by type",
+        ["All", "Soil Moisture", "Plant Disease"],
+        key="history_filter"
+    )
+
+    history = get_user_history(st.session_state.username, history_filter)
 
     if history:
-        df = pd.DataFrame(
-            history,
-            columns=["ID", "Scan Type", "Prediction", "Confidence", "Date"]
+        summary_df = pd.DataFrame(
+            [
+                {
+                    "ID": row[0],
+                    "Scan Type": row[1],
+                    "Prediction": row[2],
+                    "Confidence": f"{row[3]:.2%}",
+                    "Date": row[7]
+                }
+                for row in history
+            ]
         )
-        df["Confidence"] = df["Confidence"].apply(lambda x: f"{x:.2%}")
 
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(summary_df, use_container_width=True, hide_index=True)
+
+        st.markdown("### Scan Details")
+
+        for row in history:
+            scan_id, scan_type, prediction, confidence, explanation_en, explanation_ar, image_data, created_at = row
+
+            with st.expander(f"Scan #{scan_id} - {scan_type} - {prediction} ({created_at})"):
+                col1, col2 = st.columns([1, 1.2])
+
+                with col1:
+                    if image_data:
+                        scan_img = bytes_to_image(image_data)
+                        if scan_img:
+                            st.image(scan_img, caption="Saved Scan Image", use_container_width=True)
+                    else:
+                        st.info("No image stored for this scan.")
+
+                with col2:
+                    st.write(f"**Type:** {scan_type}")
+                    st.write(f"**Prediction:** {prediction}")
+                    st.write(f"**Confidence:** {confidence:.2%}")
+                    st.write(f"**Date:** {created_at}")
+
+                    st.markdown("**English Explanation**")
+                    st.write(explanation_en if explanation_en else "No English explanation saved.")
+
+                    if explanation_ar:
+                        st.markdown("**Arabic Explanation**")
+                        st.write(explanation_ar)
+
+        pdf_buffer = generate_history_pdf(st.session_state.username, history)
+
+        st.download_button(
+            label="Download History as PDF",
+            data=pdf_buffer,
+            file_name=f"{st.session_state.username}_scan_history.pdf",
+            mime="application/pdf"
+        )
+
     else:
         st.markdown(
             '<div class="warning-box">No previous scans found yet.</div>',
