@@ -11,3 +11,5 @@ opencv-python-headless
 bcrypt
 reportlab
 pandas
+arabic-reshaper
+python-bidi
