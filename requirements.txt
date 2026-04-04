@@ -10,3 +10,4 @@ h5py>=3.10.0
 opencv-python-headless
 bcrypt
 reportlab
+pandas
