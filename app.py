@@ -5,7 +5,8 @@ from PIL import Image
 import keras
 import google.generativeai as genai
 from dotenv import load_dotenv
-from db import create_table
+import pandas as pd
+from db import create_table, save_scan, get_user_history, delete_user_history
 from auth import create_user, login_user, get_all_users, delete_user
 
 # ----------------------------
@@ -102,25 +103,21 @@ plant_class_labels = {
 def inject_css():
     st.markdown("""
     <style>
-    /* Hide default Streamlit elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    /* App background */
     .stApp {
         background: linear-gradient(180deg, #f7faf8 0%, #eef6f0 100%);
         color: #1f2937;
     }
 
-    /* Main container spacing */
     .block-container {
         padding-top: 2rem;
         padding-bottom: 2rem;
         max-width: 1250px;
     }
 
-    /* Typography */
     html, body, [class*="css"] {
         font-family: "Inter", "Segoe UI", sans-serif;
     }
@@ -206,18 +203,6 @@ def inject_css():
         font-size: 0.92rem;
     }
 
-    .info-chip {
-        display: inline-block;
-        background: #ecfdf5;
-        color: #047857;
-        padding: 6px 12px;
-        border-radius: 999px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin-right: 8px;
-        margin-bottom: 8px;
-    }
-
     .warning-box {
         border: 1px dashed #cbd5e1;
         background: #f8fafc;
@@ -255,7 +240,6 @@ def inject_css():
         margin-bottom: 1rem;
     }
 
-    /* Sidebar */
     section[data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
     }
@@ -264,7 +248,6 @@ def inject_css():
         color: white !important;
     }
 
-    /* Buttons */
     .stButton > button {
         width: 100%;
         border-radius: 14px;
@@ -283,7 +266,6 @@ def inject_css():
         box-shadow: 0 12px 22px rgba(34, 197, 94, 0.28);
     }
 
-    /* Inputs */
     div[data-baseweb="input"] > div,
     div[data-baseweb="select"] > div,
     .stTextInput > div > div,
@@ -293,23 +275,20 @@ def inject_css():
         border-radius: 14px !important;
     }
 
-    /* Radio / uploader spacing */
-.stRadio > div {
-    gap: 0.75rem;
-}
+    .stRadio > div {
+        gap: 0.75rem;
+    }
 
-/* Make radio labels visible */
-.stRadio label,
-.stRadio span,
-.stRadio p,
-div[data-baseweb="radio"] label,
-div[data-baseweb="radio"] span {
-    color: #111827 !important;
-    opacity: 1 !important;
-    font-weight: 500;
-}
+    .stRadio label,
+    .stRadio span,
+    .stRadio p,
+    div[data-baseweb="radio"] label,
+    div[data-baseweb="radio"] span {
+        color: #111827 !important;
+        opacity: 1 !important;
+        font-weight: 500;
+    }
 
-    /* Small helper */
     .muted {
         color: #64748b;
         font-size: 0.95rem;
@@ -450,7 +429,6 @@ def show_auth_page():
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-
 def show_admin_page():
     with st.sidebar:
         st.markdown("### Admin Panel")
@@ -511,6 +489,7 @@ def show_user_page():
         st.markdown("- Soil Moisture Detection")
         st.markdown("- Plant Disease Detection")
         st.markdown("- AI Guidance in English & Arabic")
+        st.markdown("- Scan History Log")
         st.markdown("---")
         if st.button("Logout", key="user_logout"):
             logout()
@@ -595,6 +574,16 @@ def show_user_page():
 
         english_part, arabic_part = split_explanation(explanation)
 
+        # Save scan to history
+        save_scan(
+            username=st.session_state.username,
+            scan_type=task_type,
+            prediction=label,
+            confidence=prob,
+            explanation_en=english_part,
+            explanation_ar=arabic_part
+        )
+
         st.markdown(f"""
             <div class="result-card">
                 <div class="result-title">Analysis Result</div>
@@ -625,6 +614,35 @@ def show_user_page():
         if plant_model_error:
             st.info(f"Plant model note: {plant_model_error}")
 
+    # ----------------------------
+    # History Log Section
+    # ----------------------------
+    st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Previous Scans / History Log</div>', unsafe_allow_html=True)
+
+    history = get_user_history(st.session_state.username)
+
+    if history:
+        df = pd.DataFrame(
+            history,
+            columns=["ID", "Scan Type", "Prediction", "Confidence", "Date"]
+        )
+        df["Confidence"] = df["Confidence"].apply(lambda x: f"{x:.2%}")
+
+        st.dataframe(df, use_container_width=True, hide_index=True)
+    else:
+        st.markdown(
+            '<div class="warning-box">No previous scans found yet.</div>',
+            unsafe_allow_html=True
+        )
+
+    if st.button("Clear My History", key="clear_history_btn"):
+        delete_user_history(st.session_state.username)
+        st.success("History cleared successfully.")
+        st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
 # ----------------------------
 # ROUTING
 # ----------------------------
@@ -636,13 +654,3 @@ elif st.session_state.role == "user":
     show_user_page()
 else:
     st.error("Unknown role detected.")
-
-
-
-
-
-
-
-
-
-
