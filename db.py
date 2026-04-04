@@ -1,13 +1,16 @@
 import sqlite3
 from datetime import datetime
 
+DB_NAME = "users.db"
+
 def create_connection():
-    return sqlite3.connect("users.db", check_same_thread=False)
+    return sqlite3.connect(DB_NAME, check_same_thread=False)
 
 def create_table():
     conn = create_connection()
     cursor = conn.cursor()
 
+    # Users table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17,6 +20,7 @@ def create_table():
         )
     """)
 
+    # Scan history table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS scan_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,7 +38,6 @@ def create_table():
     conn.commit()
     conn.close()
 
-
 def save_scan(
     username,
     scan_type,
@@ -49,8 +52,14 @@ def save_scan(
 
     cursor.execute("""
         INSERT INTO scan_history (
-            username, scan_type, prediction, confidence,
-            explanation_en, explanation_ar, image_data, created_at
+            username,
+            scan_type,
+            prediction,
+            confidence,
+            explanation_en,
+            explanation_ar,
+            image_data,
+            created_at
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """, (
@@ -67,23 +76,36 @@ def save_scan(
     conn.commit()
     conn.close()
 
-
 def get_user_history(username, scan_type_filter="All"):
     conn = create_connection()
     cursor = conn.cursor()
 
     if scan_type_filter == "All":
         cursor.execute("""
-            SELECT id, scan_type, prediction, confidence, explanation_en,
-                   explanation_ar, image_data, created_at
+            SELECT
+                id,
+                scan_type,
+                prediction,
+                confidence,
+                explanation_en,
+                explanation_ar,
+                image_data,
+                created_at
             FROM scan_history
             WHERE username = ?
             ORDER BY id DESC
         """, (username,))
     else:
         cursor.execute("""
-            SELECT id, scan_type, prediction, confidence, explanation_en,
-                   explanation_ar, image_data, created_at
+            SELECT
+                id,
+                scan_type,
+                prediction,
+                confidence,
+                explanation_en,
+                explanation_ar,
+                image_data,
+                created_at
             FROM scan_history
             WHERE username = ? AND scan_type = ?
             ORDER BY id DESC
@@ -93,26 +115,14 @@ def get_user_history(username, scan_type_filter="All"):
     conn.close()
     return rows
 
-
-def get_scan_by_id(scan_id, username):
+def delete_user_history(username):
     conn = create_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT id, scan_type, prediction, confidence, explanation_en,
-               explanation_ar, image_data, created_at
-        FROM scan_history
-        WHERE id = ? AND username = ?
-    """, (scan_id, username))
+        DELETE FROM scan_history
+        WHERE username = ?
+    """, (username,))
 
-    row = cursor.fetchone()
-    conn.close()
-    return row
-
-
-def delete_user_history(username):
-    conn = create_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM scan_history WHERE username = ?", (username,))
     conn.commit()
     conn.close()
