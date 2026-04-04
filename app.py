@@ -1,11 +1,18 @@
 import os
+import io
+import textwrap
+import tempfile
 import streamlit as st
 import numpy as np
+import pandas as pd
 from PIL import Image
 import keras
 import google.generativeai as genai
 from dotenv import load_dotenv
-import pandas as pd
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.utils import ImageReader
+from reportlab.pdfgen import canvas
+
 from db import create_table, save_scan, get_user_history, delete_user_history
 from auth import create_user, login_user, get_all_users, delete_user
 
