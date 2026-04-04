@@ -674,11 +674,7 @@ def show_user_page():
         st.markdown("---")
 
         font_exists = os.path.exists("fonts/Amiri-Regular.ttf")
-        if font_exists:
-            st.success("Arabic PDF font detected")
-        else:
-            st.warning("Arabic PDF font missing")
-
+        
         if st.button("Logout", key="user_logout"):
             logout()
 
