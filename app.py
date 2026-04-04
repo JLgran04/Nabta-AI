@@ -660,19 +660,6 @@ def show_admin_page():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-def show_user_page():
-    with st.sidebar:
-        st.markdown("### 🌿 Nabta AI")
-        st.markdown(f"**Welcome, {st.session_state.username}**")
-        st.markdown("---")
-        st.markdown("#### Features")
-        st.markdown("- Soil Moisture Detection")
-        st.markdown("- Plant Disease Detection")
-        st.markdown("- AI Guidance in English & Arabic")
-        st.markdown("- Scan History with Images")
-        st.markdown("- Filtered PDF Export")
-        st.markdown("---")
-
         font_exists = os.path.exists("fonts/Amiri-Regular.ttf")
         
         if st.button("Logout", key="user_logout"):
