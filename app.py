@@ -8,9 +8,15 @@ from PIL import Image
 import keras
 import google.generativeai as genai
 from dotenv import load_dotenv
+
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+import arabic_reshaper
+from bidi.algorithm import get_display
 
 from db import create_table, save_scan, get_user_history, delete_user_history
 from auth import create_user, login_user, get_all_users, delete_user
@@ -30,7 +36,7 @@ create_table()
 # Create default admin account
 try:
     create_user("admin", "admin123", role="admin")
-except:
+except Exception:
     pass
 
 # ----------------------------
@@ -317,7 +323,7 @@ def inject_css():
 inject_css()
 
 # ----------------------------
-# System Functions
+# Helper Functions
 # ----------------------------
 def preprocess_image(img: Image.Image, target_size=(150, 150)):
     img = img.resize(target_size)
@@ -401,7 +407,34 @@ def wrap_text(text, width=85):
             lines.append("")
     return lines
 
+def register_pdf_fonts():
+    """
+    Put an Arabic font file at:
+    fonts/Amiri-Regular.ttf
+    """
+    font_path = "fonts/Amiri-Regular.ttf"
+    if os.path.exists(font_path):
+        try:
+            pdfmetrics.registerFont(TTFont("ArabicFont", font_path))
+        except Exception:
+            pass
+
+def shape_arabic_text(text):
+    if not text:
+        return ""
+    reshaped_text = arabic_reshaper.reshape(str(text))
+    bidi_text = get_display(reshaped_text)
+    return bidi_text
+
+def wrap_arabic_text(text, width=65):
+    if not text:
+        return []
+    shaped = shape_arabic_text(text)
+    return textwrap.wrap(shaped, width=width)
+
 def generate_history_pdf(username, history_rows):
+    register_pdf_fonts()
+
     buffer = io.BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=A4)
     page_width, page_height = A4
@@ -409,6 +442,7 @@ def generate_history_pdf(username, history_rows):
     y = page_height - margin
 
     pdf.setTitle(f"{username}_history")
+
     pdf.setFont("Helvetica-Bold", 16)
     pdf.drawString(margin, y, f"Nabta AI - Scan History for {username}")
     y -= 25
@@ -416,6 +450,8 @@ def generate_history_pdf(username, history_rows):
     pdf.setFont("Helvetica", 10)
     pdf.drawString(margin, y, f"Total scans: {len(history_rows)}")
     y -= 25
+
+    arabic_font_available = "ArabicFont" in pdfmetrics.getRegisteredFontNames()
 
     for row in history_rows:
         scan_id, scan_type, prediction, confidence, explanation_en, explanation_ar, image_data, created_at = row
@@ -460,12 +496,13 @@ def generate_history_pdf(username, history_rows):
                     width=draw_w,
                     height=draw_h,
                     preserveAspectRatio=True,
-                    mask='auto'
+                    mask="auto"
                 )
                 y -= draw_h + 12
             except Exception:
                 pass
 
+        # English Explanation
         pdf.setFont("Helvetica-Bold", 10)
         pdf.drawString(margin, y, "English Explanation:")
         y -= 14
@@ -479,20 +516,34 @@ def generate_history_pdf(username, history_rows):
             pdf.drawString(margin, y, line)
             y -= 11
 
+        # Arabic Explanation
         if explanation_ar:
-            y -= 6
+            y -= 8
+
+            if y < 80:
+                pdf.showPage()
+                y = page_height - margin
+
             pdf.setFont("Helvetica-Bold", 10)
             pdf.drawString(margin, y, "Arabic Explanation:")
-            y -= 14
+            y -= 16
 
-            pdf.setFont("Helvetica", 9)
-            for line in wrap_text(explanation_ar, width=90):
-                if y < 60:
-                    pdf.showPage()
-                    y = page_height - margin
-                    pdf.setFont("Helvetica", 9)
-                pdf.drawString(margin, y, line)
-                y -= 11
+            if arabic_font_available:
+                pdf.setFont("ArabicFont", 11)
+                arabic_lines = wrap_arabic_text(explanation_ar, width=65)
+
+                for line in arabic_lines:
+                    if y < 60:
+                        pdf.showPage()
+                        y = page_height - margin
+                        pdf.setFont("ArabicFont", 11)
+                    pdf.drawRightString(page_width - margin, y, line)
+                    y -= 14
+            else:
+                pdf.setFont("Helvetica", 9)
+                fallback_note = "[Arabic font missing: add fonts/Amiri-Regular.ttf]"
+                pdf.drawString(margin, y, fallback_note)
+                y -= 14
 
         y -= 20
         pdf.line(margin, y, page_width - margin, y)
@@ -516,7 +567,7 @@ def show_auth_page():
         <div class="auth-wrap">
             <div class="hero">
                 <h1 style="text-align: center;">🌿 Nabta AI</h1>
-                <p style="text-align: center;"> Working Towards A Greener Kuwait. </p>
+                <p style="text-align: center;">Working Towards A Greener Kuwait.</p>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -619,19 +670,27 @@ def show_user_page():
         st.markdown("- Plant Disease Detection")
         st.markdown("- AI Guidance in English & Arabic")
         st.markdown("- Scan History with Images")
-        st.markdown("- PDF Export")
+        st.markdown("- Filtered PDF Export")
         st.markdown("---")
+
+        font_exists = os.path.exists("fonts/Amiri-Regular.ttf")
+        if font_exists:
+            st.success("Arabic PDF font detected")
+        else:
+            st.warning("Arabic PDF font missing")
+
         if st.button("Logout", key="user_logout"):
             logout()
 
     st.markdown("""
         <div class="hero">
             <h1>Nabta AI Application</h1>
-            <p>
-                Upload or capture an image, choose the analysis type,
-            </p>
+            <p>Upload or capture an image, choose the analysis type.</p>
         </div>
     """, unsafe_allow_html=True)
+
+    if not os.path.exists("fonts/Amiri-Regular.ttf"):
+        st.info("For correct Arabic in PDF, add this file: fonts/Amiri-Regular.ttf")
 
     img = None
     left_col, right_col = st.columns(2)
@@ -657,10 +716,7 @@ def show_user_page():
             if uploaded is not None:
                 img = Image.open(uploaded).convert("RGB")
         else:
-            cam_img = st.camera_input(
-                "Take live photo",
-                key="user_cam_img"
-            )
+            cam_img = st.camera_input("Take live photo", key="user_cam_img")
             if cam_img is not None:
                 img = Image.open(cam_img).convert("RGB")
 
@@ -691,7 +747,7 @@ def show_user_page():
 
     if analyze_clicked:
         if img is None:
-            st.warning("Please upload or Take an image first.")
+            st.warning("Please upload or take an image first.")
             return
 
         with st.spinner("Analyzing image..."):
