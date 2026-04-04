@@ -659,9 +659,7 @@ def show_admin_page():
             col3.write("—")
 
     st.markdown('</div>', unsafe_allow_html=True)
-
-        font_exists = os.path.exists("fonts/Amiri-Regular.ttf")
-        
+def show_user_page():     
         if st.button("Logout", key="user_logout"):
             logout()
 
