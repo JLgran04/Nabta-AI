@@ -1,5 +1,6 @@
 import os
 import io
+import re
 import textwrap
 import streamlit as st
 import numpy as np
@@ -9,20 +10,21 @@ import keras
 import google.generativeai as genai
 from dotenv import load_dotenv
 
-#User history library 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+
 import arabic_reshaper
 from bidi.algorithm import get_display
 
-#Database and user import libraries
 from db import create_table, save_scan, get_user_history, delete_user_history
 from auth import create_user, login_user, get_all_users, delete_user
 
+# ----------------------------
 # Page Config & DB
+# ----------------------------
 st.set_page_config(
     page_title="Nabta AI",
     page_icon="🌿",
@@ -38,9 +40,9 @@ try:
 except Exception:
     pass
 
-
+# ----------------------------
 # Session State
-
+# ----------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "role" not in st.session_state:
@@ -48,8 +50,9 @@ if "role" not in st.session_state:
 if "username" not in st.session_state:
     st.session_state.username = ""
 
-
+# ----------------------------
 # GEMINI API
+# ----------------------------
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
@@ -59,9 +62,9 @@ if GEMINI_API_KEY:
 else:
     gemini_model = None
 
-
+# ----------------------------
 # Load AI Models
-
+# ----------------------------
 soil_model = None
 plant_model = None
 soil_model_error = None
@@ -107,7 +110,9 @@ plant_class_labels = {
     21: "Tomato (Healthy)"
 }
 
+# ----------------------------
 # CSS
+# ----------------------------
 def inject_css():
     st.markdown("""
     <style>
@@ -318,9 +323,9 @@ def inject_css():
 
 inject_css()
 
-
-# System Functions
-
+# ----------------------------
+# Helper Functions
+# ----------------------------
 def preprocess_image(img: Image.Image, target_size=(150, 150)):
     img = img.resize(target_size)
     arr = np.array(img).astype("float32") / 255.0
@@ -352,16 +357,17 @@ def explain_prediction(label: str, category: str) -> str:
     prompt = (
         f"You are an experienced agricultural advisor. "
         f"The AI predicted {category} = '{label}'. "
-        f"Give a clear explanation with: "
-        f"1) what it means, "
-        f"2) what actions the user should take, "
-        f"3) prevention tips. "
-        f"Format exactly with these headings:\n"
+        f"Give a clear explanation with:\n"
+        f"1) what it means,\n"
+        f"2) what actions the user should take,\n"
+        f"3) prevention tips.\n\n"
+        f"Format exactly like this:\n"
         f"### English Explanation\n"
         f"...\n"
         f"### Arabic Explanation\n"
         f"..."
     )
+
     try:
         resp = gemini_model.generate_content(prompt)
         if resp.candidates and resp.candidates[0].content.parts:
@@ -372,13 +378,39 @@ def explain_prediction(label: str, category: str) -> str:
         return f"Gemini explanation unavailable: {e}"
 
 def split_explanation(explanation: str):
-    english_part, arabic_part = "", ""
-    if "### Arabic Explanation" in explanation:
-        parts = explanation.split("### Arabic Explanation")
-        english_part = parts[0].replace("### English Explanation", "").strip()
-        arabic_part = parts[1].strip()
+    if not explanation:
+        return "", ""
+
+    text = explanation.strip()
+    english_part = ""
+    arabic_part = ""
+
+    arabic_match = re.search(r"#+\s*Arabic Explanation\s*", text, flags=re.IGNORECASE)
+    english_match = re.search(r"#+\s*English Explanation\s*", text, flags=re.IGNORECASE)
+
+    if arabic_match:
+        before_arabic = text[:arabic_match.start()].strip()
+        after_arabic = text[arabic_match.end():].strip()
+
+        if english_match:
+            english_part = re.sub(
+                r"#+\s*English Explanation\s*",
+                "",
+                before_arabic,
+                flags=re.IGNORECASE
+            ).strip()
+        else:
+            english_part = before_arabic
+
+        arabic_part = after_arabic
     else:
-        english_part = explanation.strip()
+        english_part = re.sub(
+            r"#+\s*English Explanation\s*",
+            "",
+            text,
+            flags=re.IGNORECASE
+        ).strip()
+
     return english_part, arabic_part
 
 def image_to_bytes(img: Image.Image):
@@ -404,16 +436,14 @@ def wrap_text(text, width=85):
     return lines
 
 def register_pdf_fonts():
-    """
-    Put an Arabic font file at:
-    fonts/Amiri-Regular.ttf
-    """
-    font_path = "fonts/Amiri-Regular.ttf"
-    if os.path.exists(font_path):
-        try:
-            pdfmetrics.registerFont(TTFont("ArabicFont", font_path))
-        except Exception:
-            pass
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    font_path = os.path.join(base_dir, "fonts", "Amiri-Regular.ttf")
+
+    if not os.path.exists(font_path):
+        raise FileNotFoundError(f"Arabic font not found: {font_path}")
+
+    if "ArabicFont" not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(TTFont("ArabicFont", font_path))
 
 def shape_arabic_text(text):
     if not text:
@@ -422,15 +452,25 @@ def shape_arabic_text(text):
     bidi_text = get_display(reshaped_text)
     return bidi_text
 
-def wrap_arabic_text(text, width=65):
+def wrap_arabic_text(text, width=55):
     if not text:
         return []
-    shaped = shape_arabic_text(text)
-    return textwrap.wrap(shaped, width=width)
+
+    lines = []
+    for paragraph in str(text).split("\n"):
+        paragraph = paragraph.strip()
+
+        if not paragraph:
+            lines.append("")
+            continue
+
+        wrapped = textwrap.wrap(paragraph, width=width)
+        for line in wrapped:
+            lines.append(shape_arabic_text(line))
+
+    return lines
 
 def generate_history_pdf(username, history_rows):
-    register_pdf_fonts()
-
     buffer = io.BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=A4)
     page_width, page_height = A4
@@ -438,6 +478,15 @@ def generate_history_pdf(username, history_rows):
     y = page_height - margin
 
     pdf.setTitle(f"{username}_history")
+
+    arabic_font_available = False
+    arabic_font_error = None
+
+    try:
+        register_pdf_fonts()
+        arabic_font_available = "ArabicFont" in pdfmetrics.getRegisteredFontNames()
+    except Exception as e:
+        arabic_font_error = str(e)
 
     pdf.setFont("Helvetica-Bold", 16)
     pdf.drawString(margin, y, f"Nabta AI - Scan History for {username}")
@@ -447,7 +496,10 @@ def generate_history_pdf(username, history_rows):
     pdf.drawString(margin, y, f"Total scans: {len(history_rows)}")
     y -= 25
 
-    arabic_font_available = "ArabicFont" in pdfmetrics.getRegisteredFontNames()
+    if not arabic_font_available and arabic_font_error:
+        pdf.setFont("Helvetica", 9)
+        pdf.drawString(margin, y, f"Arabic font error: {arabic_font_error}")
+        y -= 20
 
     for row in history_rows:
         scan_id, scan_type, prediction, confidence, explanation_en, explanation_ar, image_data, created_at = row
@@ -473,46 +525,46 @@ def generate_history_pdf(username, history_rows):
         if image_data:
             try:
                 pil_img = bytes_to_image(image_data)
-                img_buffer = io.BytesIO()
-                pil_img.save(img_buffer, format="PNG")
-                img_buffer.seek(0)
+                if pil_img is not None:
+                    img_buffer = io.BytesIO()
+                    pil_img.save(img_buffer, format="PNG")
+                    img_buffer.seek(0)
 
-                img_reader = ImageReader(img_buffer)
-                max_w = 180
-                max_h = 140
-                img_w, img_h = pil_img.size
-                scale = min(max_w / img_w, max_h / img_h)
-                draw_w = img_w * scale
-                draw_h = img_h * scale
+                    img_reader = ImageReader(img_buffer)
+                    max_w = 180
+                    max_h = 140
+                    img_w, img_h = pil_img.size
+                    scale = min(max_w / img_w, max_h / img_h)
+                    draw_w = img_w * scale
+                    draw_h = img_h * scale
 
-                pdf.drawImage(
-                    img_reader,
-                    margin,
-                    y - draw_h,
-                    width=draw_w,
-                    height=draw_h,
-                    preserveAspectRatio=True,
-                    mask="auto"
-                )
-                y -= draw_h + 12
+                    pdf.drawImage(
+                        img_reader,
+                        margin,
+                        y - draw_h,
+                        width=draw_w,
+                        height=draw_h,
+                        preserveAspectRatio=True,
+                        mask="auto"
+                    )
+                    y -= draw_h + 12
             except Exception:
                 pass
 
-        # English Explanation
-        pdf.setFont("Helvetica-Bold", 10)
-        pdf.drawString(margin, y, "English Explanation:")
-        y -= 14
+        if explanation_en:
+            pdf.setFont("Helvetica-Bold", 10)
+            pdf.drawString(margin, y, "English Explanation:")
+            y -= 14
 
-        pdf.setFont("Helvetica", 9)
-        for line in wrap_text(explanation_en, width=90):
-            if y < 60:
-                pdf.showPage()
-                y = page_height - margin
-                pdf.setFont("Helvetica", 9)
-            pdf.drawString(margin, y, line)
-            y -= 11
+            pdf.setFont("Helvetica", 9)
+            for line in wrap_text(explanation_en, width=90):
+                if y < 60:
+                    pdf.showPage()
+                    y = page_height - margin
+                    pdf.setFont("Helvetica", 9)
+                pdf.drawString(margin, y, line)
+                y -= 11
 
-        # Arabic Explanation
         if explanation_ar:
             y -= 8
 
@@ -525,20 +577,19 @@ def generate_history_pdf(username, history_rows):
             y -= 16
 
             if arabic_font_available:
-                pdf.setFont("ArabicFont", 11)
-                arabic_lines = wrap_arabic_text(explanation_ar, width=65)
+                pdf.setFont("ArabicFont", 13)
+                arabic_lines = wrap_arabic_text(explanation_ar, width=55)
 
                 for line in arabic_lines:
                     if y < 60:
                         pdf.showPage()
                         y = page_height - margin
-                        pdf.setFont("ArabicFont", 11)
+                        pdf.setFont("ArabicFont", 13)
                     pdf.drawRightString(page_width - margin, y, line)
-                    y -= 14
+                    y -= 16
             else:
                 pdf.setFont("Helvetica", 9)
-                fallback_note = "[Arabic font missing: add fonts/Amiri-Regular.ttf]"
-                pdf.drawString(margin, y, fallback_note)
+                pdf.drawString(margin, y, "[Arabic text exists but Arabic font failed to load]")
                 y -= 14
 
         y -= 20
@@ -555,9 +606,9 @@ def logout():
     st.session_state.username = ""
     st.rerun()
 
-
+# ----------------------------
 # UI Pages
-
+# ----------------------------
 def show_auth_page():
     st.markdown("""
         <div class="auth-wrap">
@@ -668,8 +719,6 @@ def show_user_page():
         st.markdown("- Scan History with Images")
         st.markdown("- Filtered PDF Export")
         st.markdown("---")
-
-        font_exists = os.path.exists("fonts/Amiri-Regular.ttf")
 
         if st.button("Logout", key="user_logout"):
             logout()
@@ -793,9 +842,9 @@ def show_user_page():
         if plant_model_error:
             st.info(f"Plant model note: {plant_model_error}")
 
-    
+    # ----------------------------
     # History Log Section
-    
+    # ----------------------------
     st.markdown('<div class="custom-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">Previous Scans / History Log</div>', unsafe_allow_html=True)
 
@@ -874,7 +923,7 @@ def show_user_page():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-
+# ----------------------------
 # ROUTING
 # ----------------------------
 if not st.session_state.logged_in:
@@ -885,4 +934,3 @@ elif st.session_state.role == "user":
     show_user_page()
 else:
     st.error("Unknown role detected.")
-    
