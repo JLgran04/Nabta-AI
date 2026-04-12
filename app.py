@@ -34,7 +34,6 @@ st.set_page_config(
 
 create_table()
 
-# Create default admin account
 try:
     create_user("admin", "admin123", role="admin")
 except Exception:
@@ -176,15 +175,6 @@ def inject_css():
         margin-bottom: 1rem;
     }
 
-    .subtle-card {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 18px;
-        padding: 18px;
-        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
-        margin-bottom: 1rem;
-    }
-
     .result-card {
         background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
         color: white;
@@ -254,11 +244,8 @@ def inject_css():
     }
 
     section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-    }
-
-    section[data-testid="stSidebar"] * {
-        color: white !important;
+        min-width: 260px !important;
+        max-width: 260px !important;
     }
 
     .stButton > button {
@@ -661,7 +648,7 @@ def show_admin_page():
         st.markdown("### Admin Panel")
         st.markdown(f"**User:** {st.session_state.username}")
         st.markdown("---")
-        if st.button("Logout", key="admin_logout"):
+        if st.button("Logout", key="admin_logout_sidebar"):
             logout()
 
     st.markdown("""
@@ -670,6 +657,11 @@ def show_admin_page():
             <p>Manage user accounts.</p>
         </div>
     """, unsafe_allow_html=True)
+
+    top_left, top_right = st.columns([6, 1])
+    with top_right:
+        if st.button("Logout", key="admin_logout_top"):
+            logout()
 
     users = get_all_users()
 
@@ -720,7 +712,7 @@ def show_user_page():
         st.markdown("- Filtered PDF Export")
         st.markdown("---")
 
-        if st.button("Logout", key="user_logout"):
+        if st.button("Logout", key="user_logout_sidebar"):
             logout()
 
     st.markdown("""
@@ -730,8 +722,14 @@ def show_user_page():
         </div>
     """, unsafe_allow_html=True)
 
-    if not os.path.exists("fonts/Amiri-Regular.ttf"):
-        st.info("For correct Arabic in PDF, add this file: fonts/Amiri-Regular.ttf")
+    top_left, top_right = st.columns([6, 1])
+    with top_right:
+        if st.button("Logout", key="user_logout_top"):
+            logout()
+
+    font_file = "fonts/NotoNaskhArabic-VariableFont_wght.ttf"
+    if not os.path.exists(font_file):
+        st.info(f"For correct Arabic in PDF, add this file: {font_file}")
 
     img = None
     left_col, right_col = st.columns(2)
@@ -842,9 +840,6 @@ def show_user_page():
         if plant_model_error:
             st.info(f"Plant model note: {plant_model_error}")
 
-    # ----------------------------
-    # History Log Section
-    # ----------------------------
     st.markdown('<div class="custom-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">Previous Scans / History Log</div>', unsafe_allow_html=True)
 
