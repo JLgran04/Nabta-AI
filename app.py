@@ -437,7 +437,7 @@ def wrap_text(text, width=85):
 
 def register_pdf_fonts():
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    font_path = os.path.join(base_dir, "fonts", "Amiri-Regular.ttf")
+    font_path = os.path.join(base_dir, "fonts", "NotoNaskhArabic-VariableFont_wght.ttf")
 
     if not os.path.exists(font_path):
         raise FileNotFoundError(f"Arabic font not found: {font_path}")
