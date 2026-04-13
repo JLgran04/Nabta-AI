@@ -9,22 +9,22 @@ from PIL import Image
 import keras
 import google.generativeai as genai
 from dotenv import load_dotenv
-
+# History log
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-
+# Arabic Font
 import arabic_reshaper
 from bidi.algorithm import get_display
 
 from db import create_table, save_scan, get_user_history, delete_user_history
 from auth import create_user, login_user, get_all_users, delete_user
 
-# ----------------------------
+
 # login page
-# ----------------------------
+
 st.set_page_config(
     page_title="Nabta AI",
     page_icon="🌿",
@@ -312,6 +312,8 @@ def preprocess_image(img: Image.Image, target_size=(150, 150)):
     arr = np.array(img).astype("float32") / 255.0
     arr = np.expand_dims(arr, axis=0)
     return arr
+    
+    # Soil Prediction
 
 def predict_soil(img: Image.Image):
     if soil_model is None:
@@ -321,6 +323,8 @@ def predict_soil(img: Image.Image):
     prob = float(preds[0][idx])
     label = soil_class_labels.get(idx, "Unknown")
     return label, prob
+  
+    # Plant Prediction
 
 def predict_plant(img: Image.Image):
     if plant_model is None:
@@ -330,6 +334,8 @@ def predict_plant(img: Image.Image):
     prob = float(preds[0][idx])
     label = plant_class_labels.get(idx, "Unknown")
     return label, prob
+  
+    # Gemini Prediction Explanation
 
 def explain_prediction(label: str, category: str) -> str:
     if not gemini_model:
