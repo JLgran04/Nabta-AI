@@ -421,6 +421,8 @@ def wrap_text(text, width=85):
         else:
             lines.append("")
     return lines
+    
+# PDF generator
 
 def register_pdf_fonts():
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -456,6 +458,8 @@ def wrap_arabic_text(text, width=55):
             lines.append(shape_arabic_text(line))
 
     return lines
+    
+# History log logic
 
 def generate_history_pdf(username, history_rows):
     buffer = io.BytesIO()
