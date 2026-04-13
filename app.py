@@ -23,7 +23,7 @@ from db import create_table, save_scan, get_user_history, delete_user_history
 from auth import create_user, login_user, get_all_users, delete_user
 
 # ----------------------------
-# Page Config & DB
+# login page
 # ----------------------------
 st.set_page_config(
     page_title="Nabta AI",
@@ -31,7 +31,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
+# User database
 create_table()
 
 try:
@@ -39,9 +39,7 @@ try:
 except Exception:
     pass
 
-# ----------------------------
-# Session State
-# ----------------------------
+# Login check
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "role" not in st.session_state:
@@ -49,9 +47,8 @@ if "role" not in st.session_state:
 if "username" not in st.session_state:
     st.session_state.username = ""
 
-# ----------------------------
+
 # GEMINI API
-# ----------------------------
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
@@ -61,9 +58,8 @@ if GEMINI_API_KEY:
 else:
     gemini_model = None
 
-# ----------------------------
+
 # Load AI Models
-# ----------------------------
 soil_model = None
 plant_model = None
 soil_model_error = None
@@ -109,9 +105,8 @@ plant_class_labels = {
     21: "Tomato (Healthy)"
 }
 
-# ----------------------------
+
 # CSS
-# ----------------------------
 def inject_css():
     st.markdown("""
     <style>
@@ -310,9 +305,8 @@ def inject_css():
 
 inject_css()
 
-# ----------------------------
-# Helper Functions
-# ----------------------------
+
+# System Functions
 def preprocess_image(img: Image.Image, target_size=(150, 150)):
     img = img.resize(target_size)
     arr = np.array(img).astype("float32") / 255.0
@@ -593,9 +587,9 @@ def logout():
     st.session_state.username = ""
     st.rerun()
 
-# ----------------------------
+
 # UI Pages
-# ----------------------------
+# Login Page
 def show_auth_page():
     st.markdown("""
         <div class="auth-wrap">
@@ -642,7 +636,7 @@ def show_auth_page():
 
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
-
+# Admin Page
 def show_admin_page():
     with st.sidebar:
         st.markdown("### Admin Panel")
@@ -698,7 +692,7 @@ def show_admin_page():
             col3.write("—")
 
     st.markdown('</div>', unsafe_allow_html=True)
-
+# User Page
 def show_user_page():
     with st.sidebar:
         st.markdown("### 🌿 Nabta AI")
@@ -918,9 +912,8 @@ def show_user_page():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------------------
+
 # ROUTING
-# ----------------------------
 if not st.session_state.logged_in:
     show_auth_page()
 elif st.session_state.role == "admin":
